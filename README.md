@@ -10,8 +10,17 @@ Written in Rust, DB Loada uses a micro component architecture with dependency in
 
 ```bash
 cargo build
-RUST_LOG=info cargo run
 ```
+
+### Initialize a project
+
+```bash
+dbloada init                       # initialize current directory
+dbloada init -d /path/to/dir       # initialize a specific directory
+dbloada init -n my-project         # use an explicit project name
+```
+
+This creates a `dbloada.yaml` file in the target directory. The project name defaults to the directory name, sanitized to a valid Kubernetes DNS label (RFC 1123).
 
 ## Running Tests
 
