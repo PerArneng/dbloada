@@ -116,3 +116,4 @@ dot -Tpng target/component_diagram.dot -o target/component_diagram.png
 1. Confirm `target/component_diagram.dot` exists.
 2. Confirm `target/component_diagram.png` exists and is non-empty.
 3. Read the PNG to verify it renders correctly.
+4. Suggest to the user that they can open the diagram in their default viewer with `open target/component_diagram.png`.

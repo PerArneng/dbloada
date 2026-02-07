@@ -1,6 +1,6 @@
 use std::path::Path;
 use crate::traits::{
-    Project, ProjectIO, Init, InitError, Logger, StringFile,
+    Project, ProjectIO, Init, InitError, Logger, FileSystem,
     ProjectSpec, TableSpec, SourceSpec, ColumnSpec, ColumnIdentifier, ColumnType,
     RelationshipSpec, PROJECT_API_VERSION,
 };
@@ -171,12 +171,12 @@ pub fn example_directories() -> Vec<&'static str> {
 pub struct InitImpl {
     logger: Box<dyn Logger>,
     project_io: Box<dyn ProjectIO>,
-    string_file: Box<dyn StringFile>,
+    file_system: Box<dyn FileSystem>,
 }
 
 impl InitImpl {
-    pub fn new(logger: Box<dyn Logger>, project_io: Box<dyn ProjectIO>, string_file: Box<dyn StringFile>) -> Self {
-        InitImpl { logger, project_io, string_file }
+    pub fn new(logger: Box<dyn Logger>, project_io: Box<dyn ProjectIO>, file_system: Box<dyn FileSystem>) -> Self {
+        InitImpl { logger, project_io, file_system }
     }
 
     fn resolve_name(path: &Path, name: Option<&str>) -> Result<String, InitError> {
@@ -220,13 +220,13 @@ impl Init for InitImpl {
 
         for dir in example_directories() {
             let dir_path = path.join(dir);
-            self.string_file.ensure_dir(&dir_path)?;
+            self.file_system.ensure_dir(&dir_path)?;
             self.logger.info(&format!("created directory: {}", dir_path.display()));
         }
 
         for (relative_path, content) in example_data_files() {
             let file_path = path.join(relative_path);
-            self.string_file.save(content, &file_path)?;
+            self.file_system.save(content, &file_path)?;
             self.logger.info(&format!("created {}", file_path.display()));
         }
 

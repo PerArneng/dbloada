@@ -57,17 +57,17 @@ mod tests {
         use crate::components::test_helpers::TestLogger;
         use crate::components::project_io::YamlProjectIO;
         use crate::components::project_serialization::YamlProjectSerialization;
-        use crate::components::test_helpers::InMemoryStringFile;
+        use crate::components::test_helpers::InMemoryFileSystem;
         use std::rc::Rc;
         use std::cell::RefCell;
         use std::collections::HashMap;
 
         let store = Rc::new(RefCell::new(HashMap::new()));
-        let string_file = Box::new(InMemoryStringFile::new(store));
+        let file_system = Box::new(InMemoryFileSystem::new(store));
         let serialization = Box::new(YamlProjectSerialization::new(Box::new(TestLogger)));
         let project_io = Box::new(YamlProjectIO::new(
             Box::new(TestLogger),
-            string_file,
+            file_system,
             serialization,
         ));
         let loader = LoadImpl::new(Box::new(TestLogger), project_io);

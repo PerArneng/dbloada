@@ -1,24 +1,24 @@
 use std::path::Path;
 use crate::traits::{
     Project, ProjectIO, ProjectIOError,
-    ProjectSerialization, Logger, StringFile,
+    ProjectSerialization, Logger, FileSystem,
 };
 
 pub struct YamlProjectIO {
     logger: Box<dyn Logger>,
-    string_file: Box<dyn StringFile>,
+    file_system: Box<dyn FileSystem>,
     serialization: Box<dyn ProjectSerialization>,
 }
 
 impl YamlProjectIO {
     pub fn new(
         logger: Box<dyn Logger>,
-        string_file: Box<dyn StringFile>,
+        file_system: Box<dyn FileSystem>,
         serialization: Box<dyn ProjectSerialization>,
     ) -> Self {
         YamlProjectIO {
             logger,
-            string_file,
+            file_system,
             serialization,
         }
     }
@@ -27,7 +27,7 @@ impl YamlProjectIO {
 impl ProjectIO for YamlProjectIO {
     fn load(&self, path: &Path) -> Result<Project, ProjectIOError> {
         self.logger.debug(&format!("loading project from: {}", path.display()));
-        let content = self.string_file.load(path)?;
+        let content = self.file_system.load(path)?;
         let project = self.serialization.deserialize(&content)?;
         self.logger.info(&format!("loaded project '{}' from: {}", project.name, path.display()));
         Ok(project)
@@ -36,7 +36,7 @@ impl ProjectIO for YamlProjectIO {
     fn save(&self, project: &Project, path: &Path) -> Result<(), ProjectIOError> {
         self.logger.debug(&format!("saving project '{}' to: {}", project.name, path.display()));
         let content = self.serialization.serialize(project)?;
-        self.string_file.save(&content, path)?;
+        self.file_system.save(&content, path)?;
         self.logger.info(&format!("saved project '{}' to: {}", project.name, path.display()));
         Ok(())
     }
@@ -45,16 +45,16 @@ impl ProjectIO for YamlProjectIO {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::test_helpers::{InMemoryStringFile, TestLogger};
+    use crate::components::test_helpers::{InMemoryFileSystem, TestLogger};
     use crate::components::project_serialization::YamlProjectSerialization;
     use crate::traits::{PROJECT_API_VERSION, ProjectSpec};
     use std::path::PathBuf;
 
     fn make_io() -> (YamlProjectIO, std::rc::Rc<std::cell::RefCell<std::collections::HashMap<PathBuf, String>>>) {
         let store = std::rc::Rc::new(std::cell::RefCell::new(std::collections::HashMap::new()));
-        let string_file = Box::new(InMemoryStringFile::new(store.clone()));
+        let file_system = Box::new(InMemoryFileSystem::new(store.clone()));
         let serialization = Box::new(YamlProjectSerialization::new(Box::new(TestLogger)));
-        let io = YamlProjectIO::new(Box::new(TestLogger), string_file, serialization);
+        let io = YamlProjectIO::new(Box::new(TestLogger), file_system, serialization);
         (io, store)
     }
 

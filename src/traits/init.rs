@@ -1,7 +1,7 @@
 use std::path::Path;
 use thiserror::Error;
 use super::project_io::ProjectIOError;
-use super::string_file::StringFileError;
+use super::file_system::FileSystemError;
 
 #[derive(Debug, Error)]
 pub enum InitError {
@@ -14,7 +14,7 @@ pub enum InitError {
     #[error("failed to write dbloada.yaml: {0}")]
     IOError(#[from] ProjectIOError),
     #[error("file operation failed: {0}")]
-    FileError(#[from] StringFileError),
+    FileError(#[from] FileSystemError),
 }
 
 pub trait Init {

@@ -1,12 +1,12 @@
 use std::path::Path;
 use thiserror::Error;
-use super::string_file::StringFileError;
+use super::file_system::FileSystemError;
 use super::project_serialization::{Project, ProjectSerializationError};
 
 #[derive(Debug, Error)]
 pub enum ProjectIOError {
     #[error(transparent)]
-    FileError(#[from] StringFileError),
+    FileError(#[from] FileSystemError),
     #[error(transparent)]
     SerializationError(#[from] ProjectSerializationError),
 }
