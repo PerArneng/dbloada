@@ -24,7 +24,13 @@ dbloada init -d /path/to/dir       # initialize a specific directory
 dbloada init -n my-project         # use an explicit project name
 ```
 
-This creates a `dbloada.yaml` file in the target directory. The project name defaults to the directory name, sanitized to a valid Kubernetes DNS label (RFC 1123).
+This creates a complete example project in the target directory:
+
+- `dbloada.yaml` — project spec with 3 example tables (country, city, office) including columns and relationships
+- `data/` — CSV data files for each table
+- `scripts/` — empty directory for custom scripts
+
+The project name defaults to the directory name, sanitized to a valid Kubernetes DNS label (RFC 1123).
 
 ### Load a project
 
