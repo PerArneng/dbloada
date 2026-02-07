@@ -37,7 +37,7 @@ enum Commands {
 fn main() {
     let cli = Cli::parse();
     let assembler = ComponentAssembler::new();
-    let engine = assembler.db_loada_engine();
+    let engine = assembler.engine();
 
     match cli.command {
         Commands::Init { dir, name } => {

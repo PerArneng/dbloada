@@ -1,19 +1,19 @@
 use std::path::Path;
-use crate::traits::{DBLoadaProject, DbLoadaEngine, Init, InitError, Load, LoadError, Logger};
+use crate::traits::{Project, Engine, Init, InitError, Load, LoadError, Logger};
 
-pub struct DbLoadaEngineImpl {
+pub struct EngineImpl {
     logger: Box<dyn Logger>,
     init: Box<dyn Init>,
     load: Box<dyn Load>,
 }
 
-impl DbLoadaEngineImpl {
+impl EngineImpl {
     pub fn new(logger: Box<dyn Logger>, init: Box<dyn Init>, load: Box<dyn Load>) -> Self {
-        DbLoadaEngineImpl { logger, init, load }
+        EngineImpl { logger, init, load }
     }
 }
 
-impl DbLoadaEngine for DbLoadaEngineImpl {
+impl Engine for EngineImpl {
     fn init(&self) {
         self.logger.info("hello");
     }
@@ -22,7 +22,7 @@ impl DbLoadaEngine for DbLoadaEngineImpl {
         self.init.init(path, name)
     }
 
-    fn load_project(&self, path: &Path) -> Result<DBLoadaProject, LoadError> {
+    fn load_project(&self, path: &Path) -> Result<Project, LoadError> {
         self.load.load(path)
     }
 }

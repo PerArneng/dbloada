@@ -1,10 +1,10 @@
 use thiserror::Error;
 
-pub const DBLOADA_PROJECT_API_VERSION: &str = "project.dbloada.io/v1";
-pub const DBLOADA_PROJECT_KIND: &str = "DBLoadaProject";
+pub const PROJECT_API_VERSION: &str = "project.dbloada.io/v1";
+pub const PROJECT_KIND: &str = "DBLoadaProject";
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct DBLoadaProject {
+pub struct Project {
     pub name: String,
     pub api_version: String,
     pub spec: ProjectSpec,
@@ -61,7 +61,7 @@ pub struct RelationshipSpec {
 }
 
 #[derive(Debug, Error)]
-pub enum DbLoadaProjectSerializationError {
+pub enum ProjectSerializationError {
     #[error("failed to serialize project: {0}")]
     SerializeError(String),
     #[error("failed to deserialize project: {0}")]
@@ -70,7 +70,7 @@ pub enum DbLoadaProjectSerializationError {
     UnexpectedKind { expected: String, actual: String },
 }
 
-pub trait DbLoadaProjectSerialization {
-    fn serialize(&self, project: &DBLoadaProject) -> Result<String, DbLoadaProjectSerializationError>;
-    fn deserialize(&self, content: &str) -> Result<DBLoadaProject, DbLoadaProjectSerializationError>;
+pub trait ProjectSerialization {
+    fn serialize(&self, project: &Project) -> Result<String, ProjectSerializationError>;
+    fn deserialize(&self, content: &str) -> Result<Project, ProjectSerializationError>;
 }

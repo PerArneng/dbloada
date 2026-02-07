@@ -65,7 +65,7 @@ pub mod foo;
 
 ## Step 3: Add a factory function to `ComponentAssembler`
 
-In `src/component_assembler.rs`, add a function that returns `Box<dyn Foo>`. The function name should match the trait name in snake_case. For example, the `Logger` trait gets a `logger()` function, `DbLoadaEngine` gets `db_loada_engine()`, and `Foo` gets `foo()`.
+In `src/component_assembler.rs`, add a function that returns `Box<dyn Foo>`. The function name should match the trait name in snake_case. For example, the `Logger` trait gets a `logger()` function, `Engine` gets `engine()`, and `Foo` gets `foo()`.
 
 ```rust
 pub fn foo(&self) -> Box<dyn Foo> {

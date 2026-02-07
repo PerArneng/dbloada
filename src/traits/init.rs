@@ -1,6 +1,6 @@
 use std::path::Path;
 use thiserror::Error;
-use super::db_loada_project_io::DbLoadaProjectIOError;
+use super::project_io::ProjectIOError;
 
 #[derive(Debug, Error)]
 pub enum InitError {
@@ -11,7 +11,7 @@ pub enum InitError {
     #[error("invalid resource name '{name}': {reason}")]
     InvalidResourceName { name: String, reason: String },
     #[error("failed to write dbloada.yaml: {0}")]
-    IOError(#[from] DbLoadaProjectIOError),
+    IOError(#[from] ProjectIOError),
 }
 
 pub trait Init {

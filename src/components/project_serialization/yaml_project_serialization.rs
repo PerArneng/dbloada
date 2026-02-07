@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 use crate::traits::{
-    DBLoadaProject, DbLoadaProjectSerialization, DbLoadaProjectSerializationError,
-    DBLOADA_PROJECT_KIND, Logger,
+    Project, ProjectSerialization, ProjectSerializationError,
+    PROJECT_KIND, Logger,
     ProjectSpec, TableSpec, SourceSpec, ColumnSpec, ColumnIdentifier, ColumnType, RelationshipSpec,
 };
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct DbLoadaProjectYaml {
+struct ProjectYaml {
     api_version: String,
     kind: String,
     metadata: MetadataYaml,
@@ -144,7 +144,7 @@ fn relationship_to_yaml(rel: &RelationshipSpec) -> RelationshipSpecYaml {
     }
 }
 
-fn spec_from_yaml(yaml: Option<ProjectSpecYaml>) -> Result<ProjectSpec, DbLoadaProjectSerializationError> {
+fn spec_from_yaml(yaml: Option<ProjectSpecYaml>) -> Result<ProjectSpec, ProjectSerializationError> {
     match yaml {
         None => Ok(ProjectSpec { tables: vec![] }),
         Some(spec_yaml) => {
@@ -158,7 +158,7 @@ fn spec_from_yaml(yaml: Option<ProjectSpecYaml>) -> Result<ProjectSpec, DbLoadaP
     }
 }
 
-fn table_from_yaml(yaml: TableSpecYaml) -> Result<TableSpec, DbLoadaProjectSerializationError> {
+fn table_from_yaml(yaml: TableSpecYaml) -> Result<TableSpec, ProjectSerializationError> {
     let columns = yaml
         .columns
         .into_iter()
@@ -187,9 +187,9 @@ fn table_from_yaml(yaml: TableSpecYaml) -> Result<TableSpec, DbLoadaProjectSeria
     })
 }
 
-fn column_from_yaml(yaml: ColumnSpecYaml) -> Result<ColumnSpec, DbLoadaProjectSerializationError> {
+fn column_from_yaml(yaml: ColumnSpecYaml) -> Result<ColumnSpec, ProjectSerializationError> {
     let column_type = parse_column_type(&yaml.column_type)
-        .map_err(|e| DbLoadaProjectSerializationError::DeserializeError(e))?;
+        .map_err(|e| ProjectSerializationError::DeserializeError(e))?;
     let column_identifier = match yaml.column_identifier {
         ColumnIdentifierYaml::Index(i) => ColumnIdentifier::Index(i),
         ColumnIdentifierYaml::Name(n) => ColumnIdentifier::Name(n),
@@ -202,10 +202,10 @@ fn column_from_yaml(yaml: ColumnSpecYaml) -> Result<ColumnSpec, DbLoadaProjectSe
     })
 }
 
-pub fn serialize_to_yaml(project: &DBLoadaProject) -> Result<String, DbLoadaProjectSerializationError> {
-    let yaml_model = DbLoadaProjectYaml {
+pub fn serialize_to_yaml(project: &Project) -> Result<String, ProjectSerializationError> {
+    let yaml_model = ProjectYaml {
         api_version: project.api_version.clone(),
-        kind: DBLOADA_PROJECT_KIND.to_string(),
+        kind: PROJECT_KIND.to_string(),
         metadata: MetadataYaml {
             name: project.name.clone(),
         },
@@ -216,48 +216,48 @@ pub fn serialize_to_yaml(project: &DBLoadaProject) -> Result<String, DbLoadaProj
         },
     };
     serde_yaml::to_string(&yaml_model)
-        .map_err(|e| DbLoadaProjectSerializationError::SerializeError(e.to_string()))
+        .map_err(|e| ProjectSerializationError::SerializeError(e.to_string()))
 }
 
-pub fn deserialize_from_yaml(content: &str) -> Result<DBLoadaProject, DbLoadaProjectSerializationError> {
-    let yaml_model: DbLoadaProjectYaml = serde_yaml::from_str(content)
-        .map_err(|e| DbLoadaProjectSerializationError::DeserializeError(e.to_string()))?;
+pub fn deserialize_from_yaml(content: &str) -> Result<Project, ProjectSerializationError> {
+    let yaml_model: ProjectYaml = serde_yaml::from_str(content)
+        .map_err(|e| ProjectSerializationError::DeserializeError(e.to_string()))?;
 
-    if yaml_model.kind != DBLOADA_PROJECT_KIND {
-        return Err(DbLoadaProjectSerializationError::UnexpectedKind {
-            expected: DBLOADA_PROJECT_KIND.to_string(),
+    if yaml_model.kind != PROJECT_KIND {
+        return Err(ProjectSerializationError::UnexpectedKind {
+            expected: PROJECT_KIND.to_string(),
             actual: yaml_model.kind,
         });
     }
 
     let spec = spec_from_yaml(yaml_model.spec)?;
 
-    Ok(DBLoadaProject {
+    Ok(Project {
         name: yaml_model.metadata.name,
         api_version: yaml_model.api_version,
         spec,
     })
 }
 
-pub struct YamlDbLoadaProjectSerialization {
+pub struct YamlProjectSerialization {
     logger: Box<dyn Logger>,
 }
 
-impl YamlDbLoadaProjectSerialization {
+impl YamlProjectSerialization {
     pub fn new(logger: Box<dyn Logger>) -> Self {
-        YamlDbLoadaProjectSerialization { logger }
+        YamlProjectSerialization { logger }
     }
 }
 
-impl DbLoadaProjectSerialization for YamlDbLoadaProjectSerialization {
-    fn serialize(&self, project: &DBLoadaProject) -> Result<String, DbLoadaProjectSerializationError> {
+impl ProjectSerialization for YamlProjectSerialization {
+    fn serialize(&self, project: &Project) -> Result<String, ProjectSerializationError> {
         self.logger.debug(&format!("serializing project: {}", project.name));
         let result = serialize_to_yaml(project)?;
         self.logger.info(&format!("serialized project: {}", project.name));
         Ok(result)
     }
 
-    fn deserialize(&self, content: &str) -> Result<DBLoadaProject, DbLoadaProjectSerializationError> {
+    fn deserialize(&self, content: &str) -> Result<Project, ProjectSerializationError> {
         self.logger.debug("deserializing project");
         let project = deserialize_from_yaml(content)?;
         self.logger.info(&format!("deserialized project: {}", project.name));
@@ -268,12 +268,12 @@ impl DbLoadaProjectSerialization for YamlDbLoadaProjectSerialization {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::DBLOADA_PROJECT_API_VERSION;
+    use crate::traits::PROJECT_API_VERSION;
 
-    fn empty_spec_project(name: &str) -> DBLoadaProject {
-        DBLoadaProject {
+    fn empty_spec_project(name: &str) -> Project {
+        Project {
             name: name.to_string(),
-            api_version: DBLOADA_PROJECT_API_VERSION.to_string(),
+            api_version: PROJECT_API_VERSION.to_string(),
             spec: ProjectSpec { tables: vec![] },
         }
     }
@@ -292,7 +292,7 @@ mod tests {
     fn serialize_to_yaml_uses_correct_api_version() {
         let project = empty_spec_project("test");
         let yaml = serialize_to_yaml(&project).unwrap();
-        assert!(yaml.contains(DBLOADA_PROJECT_API_VERSION));
+        assert!(yaml.contains(PROJECT_API_VERSION));
     }
 
     #[test]
@@ -376,7 +376,7 @@ mod tests {
         let result = deserialize_from_yaml(yaml);
         assert!(matches!(
             result,
-            Err(DbLoadaProjectSerializationError::UnexpectedKind { .. })
+            Err(ProjectSerializationError::UnexpectedKind { .. })
         ));
     }
 
@@ -386,7 +386,7 @@ mod tests {
         let result = deserialize_from_yaml(yaml);
         assert!(matches!(
             result,
-            Err(DbLoadaProjectSerializationError::UnexpectedKind { .. })
+            Err(ProjectSerializationError::UnexpectedKind { .. })
         ));
     }
 
@@ -396,7 +396,7 @@ mod tests {
         let result = deserialize_from_yaml(yaml);
         assert!(matches!(
             result,
-            Err(DbLoadaProjectSerializationError::DeserializeError(_))
+            Err(ProjectSerializationError::DeserializeError(_))
         ));
     }
 
@@ -405,7 +405,7 @@ mod tests {
         let result = deserialize_from_yaml("");
         assert!(matches!(
             result,
-            Err(DbLoadaProjectSerializationError::DeserializeError(_))
+            Err(ProjectSerializationError::DeserializeError(_))
         ));
     }
 
@@ -415,7 +415,7 @@ mod tests {
         let result = deserialize_from_yaml(yaml);
         assert!(matches!(
             result,
-            Err(DbLoadaProjectSerializationError::DeserializeError(_))
+            Err(ProjectSerializationError::DeserializeError(_))
         ));
     }
 
@@ -425,7 +425,7 @@ mod tests {
         let result = deserialize_from_yaml(yaml);
         assert!(matches!(
             result,
-            Err(DbLoadaProjectSerializationError::DeserializeError(_))
+            Err(ProjectSerializationError::DeserializeError(_))
         ));
     }
 
@@ -435,7 +435,7 @@ mod tests {
         let result = deserialize_from_yaml(yaml);
         assert!(matches!(
             result,
-            Err(DbLoadaProjectSerializationError::DeserializeError(_))
+            Err(ProjectSerializationError::DeserializeError(_))
         ));
     }
 
@@ -445,7 +445,7 @@ mod tests {
         let result = deserialize_from_yaml(yaml);
         assert!(matches!(
             result,
-            Err(DbLoadaProjectSerializationError::DeserializeError(_))
+            Err(ProjectSerializationError::DeserializeError(_))
         ));
     }
 
@@ -587,9 +587,9 @@ spec:
 
     #[test]
     fn round_trip_with_full_spec() {
-        let project = DBLoadaProject {
+        let project = Project {
             name: "test".to_string(),
-            api_version: DBLOADA_PROJECT_API_VERSION.to_string(),
+            api_version: PROJECT_API_VERSION.to_string(),
             spec: ProjectSpec {
                 tables: vec![TableSpec {
                     name: "users".to_string(),

@@ -16,8 +16,8 @@ Build a table mapping each trait to its list of dependencies. For example:
 | Trait | Dependencies |
 |---|---|
 | Logger | _(none)_ |
-| Init | Logger, DbLoadaProjectIO |
-| DbLoadaEngine | Logger, Init, Load |
+| Init | Logger, ProjectIO |
+| Engine | Logger, Init, Load |
 | ... | ... |
 
 ## Step 2: Assign layers by depth

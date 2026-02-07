@@ -1,7 +1,7 @@
 use std::path::Path;
 use thiserror::Error;
-use super::db_loada_project_serialization::DBLoadaProject;
-use super::db_loada_project_io::DbLoadaProjectIOError;
+use super::project_serialization::Project;
+use super::project_io::ProjectIOError;
 
 #[derive(Debug, Error)]
 pub enum LoadError {
@@ -10,9 +10,9 @@ pub enum LoadError {
     #[error("project file not found: {0}")]
     ProjectFileNotFound(String),
     #[error(transparent)]
-    IOError(#[from] DbLoadaProjectIOError),
+    IOError(#[from] ProjectIOError),
 }
 
 pub trait Load {
-    fn load(&self, path: &Path) -> Result<DBLoadaProject, LoadError>;
+    fn load(&self, path: &Path) -> Result<Project, LoadError>;
 }

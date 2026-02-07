@@ -1,22 +1,22 @@
 use std::path::Path;
 use crate::traits::{
-    DBLoadaProject, DbLoadaProjectIO, DbLoadaProjectIOError,
-    DbLoadaProjectSerialization, Logger, StringFile,
+    Project, ProjectIO, ProjectIOError,
+    ProjectSerialization, Logger, StringFile,
 };
 
-pub struct YamlDbLoadaProjectIO {
+pub struct YamlProjectIO {
     logger: Box<dyn Logger>,
     string_file: Box<dyn StringFile>,
-    serialization: Box<dyn DbLoadaProjectSerialization>,
+    serialization: Box<dyn ProjectSerialization>,
 }
 
-impl YamlDbLoadaProjectIO {
+impl YamlProjectIO {
     pub fn new(
         logger: Box<dyn Logger>,
         string_file: Box<dyn StringFile>,
-        serialization: Box<dyn DbLoadaProjectSerialization>,
+        serialization: Box<dyn ProjectSerialization>,
     ) -> Self {
-        YamlDbLoadaProjectIO {
+        YamlProjectIO {
             logger,
             string_file,
             serialization,
@@ -24,8 +24,8 @@ impl YamlDbLoadaProjectIO {
     }
 }
 
-impl DbLoadaProjectIO for YamlDbLoadaProjectIO {
-    fn load(&self, path: &Path) -> Result<DBLoadaProject, DbLoadaProjectIOError> {
+impl ProjectIO for YamlProjectIO {
+    fn load(&self, path: &Path) -> Result<Project, ProjectIOError> {
         self.logger.debug(&format!("loading project from: {}", path.display()));
         let content = self.string_file.load(path)?;
         let project = self.serialization.deserialize(&content)?;
@@ -33,7 +33,7 @@ impl DbLoadaProjectIO for YamlDbLoadaProjectIO {
         Ok(project)
     }
 
-    fn save(&self, project: &DBLoadaProject, path: &Path) -> Result<(), DbLoadaProjectIOError> {
+    fn save(&self, project: &Project, path: &Path) -> Result<(), ProjectIOError> {
         self.logger.debug(&format!("saving project '{}' to: {}", project.name, path.display()));
         let content = self.serialization.serialize(project)?;
         self.string_file.save(&content, path)?;
@@ -46,22 +46,22 @@ impl DbLoadaProjectIO for YamlDbLoadaProjectIO {
 mod tests {
     use super::*;
     use crate::components::test_helpers::{InMemoryStringFile, TestLogger};
-    use crate::components::db_loada_project_serialization::YamlDbLoadaProjectSerialization;
-    use crate::traits::{DBLOADA_PROJECT_API_VERSION, ProjectSpec};
+    use crate::components::project_serialization::YamlProjectSerialization;
+    use crate::traits::{PROJECT_API_VERSION, ProjectSpec};
     use std::path::PathBuf;
 
-    fn make_io() -> (YamlDbLoadaProjectIO, std::rc::Rc<std::cell::RefCell<std::collections::HashMap<PathBuf, String>>>) {
+    fn make_io() -> (YamlProjectIO, std::rc::Rc<std::cell::RefCell<std::collections::HashMap<PathBuf, String>>>) {
         let store = std::rc::Rc::new(std::cell::RefCell::new(std::collections::HashMap::new()));
         let string_file = Box::new(InMemoryStringFile::new(store.clone()));
-        let serialization = Box::new(YamlDbLoadaProjectSerialization::new(Box::new(TestLogger)));
-        let io = YamlDbLoadaProjectIO::new(Box::new(TestLogger), string_file, serialization);
+        let serialization = Box::new(YamlProjectSerialization::new(Box::new(TestLogger)));
+        let io = YamlProjectIO::new(Box::new(TestLogger), string_file, serialization);
         (io, store)
     }
 
-    fn test_project(name: &str) -> DBLoadaProject {
-        DBLoadaProject {
+    fn test_project(name: &str) -> Project {
+        Project {
             name: name.to_string(),
-            api_version: DBLOADA_PROJECT_API_VERSION.to_string(),
+            api_version: PROJECT_API_VERSION.to_string(),
             spec: ProjectSpec { tables: vec![] },
         }
     }
@@ -138,7 +138,7 @@ mod tests {
         io.save(&project, &path).unwrap();
         let loaded = io.load(&path).unwrap();
 
-        assert_eq!(loaded.api_version, DBLOADA_PROJECT_API_VERSION);
+        assert_eq!(loaded.api_version, PROJECT_API_VERSION);
     }
 
     #[test]

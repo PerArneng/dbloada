@@ -1,7 +1,7 @@
 use std::path::Path;
 use crate::traits::{
-    DBLoadaProject, DbLoadaProjectIO, Init, InitError, Logger,
-    ProjectSpec, DBLOADA_PROJECT_API_VERSION,
+    Project, ProjectIO, Init, InitError, Logger,
+    ProjectSpec, PROJECT_API_VERSION,
 };
 
 pub fn sanitize_resource_name(raw: &str) -> String {
@@ -64,11 +64,11 @@ pub fn validate_resource_name(name: &str) -> Result<(), String> {
 
 pub struct InitImpl {
     logger: Box<dyn Logger>,
-    project_io: Box<dyn DbLoadaProjectIO>,
+    project_io: Box<dyn ProjectIO>,
 }
 
 impl InitImpl {
-    pub fn new(logger: Box<dyn Logger>, project_io: Box<dyn DbLoadaProjectIO>) -> Self {
+    pub fn new(logger: Box<dyn Logger>, project_io: Box<dyn ProjectIO>) -> Self {
         InitImpl { logger, project_io }
     }
 
@@ -111,9 +111,9 @@ impl Init for InitImpl {
 
         let project_name = Self::resolve_name(path, name)?;
 
-        let project = DBLoadaProject {
+        let project = Project {
             name: project_name,
-            api_version: DBLOADA_PROJECT_API_VERSION.to_string(),
+            api_version: PROJECT_API_VERSION.to_string(),
             spec: ProjectSpec { tables: vec![] },
         };
 

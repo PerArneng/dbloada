@@ -1,12 +1,12 @@
 use crate::components::logger::EnvLogger;
-use crate::components::db_loada_engine::DbLoadaEngineImpl;
+use crate::components::engine::EngineImpl;
 use crate::components::init::InitImpl;
 use crate::components::load::LoadImpl;
 use crate::components::string_file::DiskStringFile;
-use crate::components::db_loada_project_serialization::YamlDbLoadaProjectSerialization;
-use crate::components::db_loada_project_io::YamlDbLoadaProjectIO;
+use crate::components::project_serialization::YamlProjectSerialization;
+use crate::components::project_io::YamlProjectIO;
 use crate::traits::{
-    DbLoadaEngine, DbLoadaProjectIO, DbLoadaProjectSerialization, Init, Load, Logger, StringFile,
+    Engine, ProjectIO, ProjectSerialization, Init, Load, Logger, StringFile,
 };
 
 pub struct ComponentAssembler;
@@ -21,30 +21,30 @@ impl ComponentAssembler {
     }
 
     pub fn init(&self) -> Box<dyn Init> {
-        Box::new(InitImpl::new(self.logger(), self.db_loada_project_io()))
+        Box::new(InitImpl::new(self.logger(), self.project_io()))
     }
 
     pub fn load(&self) -> Box<dyn Load> {
-        Box::new(LoadImpl::new(self.logger(), self.db_loada_project_io()))
+        Box::new(LoadImpl::new(self.logger(), self.project_io()))
     }
 
-    pub fn db_loada_engine(&self) -> Box<dyn DbLoadaEngine> {
-        Box::new(DbLoadaEngineImpl::new(self.logger(), self.init(), self.load()))
+    pub fn engine(&self) -> Box<dyn Engine> {
+        Box::new(EngineImpl::new(self.logger(), self.init(), self.load()))
     }
 
     pub fn string_file(&self) -> Box<dyn StringFile> {
         Box::new(DiskStringFile::new(self.logger()))
     }
 
-    pub fn db_loada_project_serialization(&self) -> Box<dyn DbLoadaProjectSerialization> {
-        Box::new(YamlDbLoadaProjectSerialization::new(self.logger()))
+    pub fn project_serialization(&self) -> Box<dyn ProjectSerialization> {
+        Box::new(YamlProjectSerialization::new(self.logger()))
     }
 
-    pub fn db_loada_project_io(&self) -> Box<dyn DbLoadaProjectIO> {
-        Box::new(YamlDbLoadaProjectIO::new(
+    pub fn project_io(&self) -> Box<dyn ProjectIO> {
+        Box::new(YamlProjectIO::new(
             self.logger(),
             self.string_file(),
-            self.db_loada_project_serialization(),
+            self.project_serialization(),
         ))
     }
 }
