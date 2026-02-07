@@ -1,8 +1,9 @@
 ![DB Loada](docs/gfx/dbloada_logo.png)
+🗣️ *<sub>D-B load-uh</sub>*
+
+🔗 [https://www.dbloada.ai](https://www.dbloada.ai)
 
 # DBLOADA
-
-*<sub>D-B load-uh</sub>*
 
 ## About
 
@@ -12,6 +13,14 @@ information they need by consuming minimal context. It's a commandline tool that
 information about static and dynamic data sources and then use that information to build a structured database in a
 SQL or Graph database. It also creates an Agent Skill that can be used by AI to understand how to query the database
 efficiently. 
+
+## Features
+* Loading data from CSV files
+* Loading data from any program or script as long as they can output CSV
+* SQLLite database support
+* Neo4J database support
+* PostgreSQL database support
+
 
 ## Architecture
 Written in Rust, DBLOADA uses a micro component architecture with dependency injection for modularity, extensibility, 
