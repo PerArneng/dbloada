@@ -1,0 +1,60 @@
+apiVersion: project.dbloada.io/v1
+kind: DBLoadaProject
+metadata:
+  name: testdata
+spec:
+  tables:
+    - name: country
+      description: Countries where cities and by extension offices are located in
+      hasHeader: false
+      source:
+        filename: data/countries.csv
+        characterEncoding: utf-8
+      columns:
+        - name: name
+          description: The official name of the city
+          columnIdentifier: 0
+          type: string
+    - name: city
+      description: |
+        This represents a city located within a country.
+      hasHeader: true
+      source:
+        filename: data/cities.csv
+        characterEncoding: utf-8
+      columns:
+        - name: name
+          description: The official name of the city
+          columnIdentifier: "Name" # name in quotes or index (0 based)
+          type: string # string(maxLength), string or int64
+        - name: country
+          description: The country where the city is located in
+          columnIdentifier: "Country" # name in quotes or index (0 based)
+          type: string # string(50) # a string with 50 characters max length
+      relationships:
+        - name: located_in_country
+          description: The country where the city is located in
+          sourceColumn: country
+          targetTable: country
+          targetColumn: name
+    - name: office
+      description: The physical building where the people in this company work
+      hasHeader: true
+      source:
+        filename: data/offices.csv
+        characterEncoding: utf-8
+      columns:
+        - name: building_name
+          description: The name of the building as referred to by the people who work in the company or an official name.
+          columnIdentifier: "Building Name" # name in quotes or index (0 based)
+          type: string # string(maxLength), string or int64
+        - name: location
+          description: The city where the office is located.
+          columnIdentifier: "Location" # name in quotes or index (0 based)
+          type: string # string(50) # a string with 50 characters max length
+      relationships:
+        - name: located_in
+          description: The city where a the office is located in.
+          sourceColumn: location
+          targetTable: city
+          targetColumn: country
