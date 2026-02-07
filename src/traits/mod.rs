@@ -4,6 +4,7 @@ pub mod init;
 pub mod string_file;
 pub mod db_loada_project_serialization;
 pub mod db_loada_project_io;
+pub mod load;
 
 pub use logger::Logger;
 pub use db_loada_engine::DbLoadaEngine;
@@ -12,5 +13,7 @@ pub use string_file::{StringFile, StringFileError};
 pub use db_loada_project_serialization::{
     DBLoadaProject, DbLoadaProjectSerialization, DbLoadaProjectSerializationError,
     DBLOADA_PROJECT_API_VERSION, DBLOADA_PROJECT_KIND,
+    ProjectSpec, TableSpec, SourceSpec, ColumnSpec, ColumnIdentifier, ColumnType, RelationshipSpec,
 };
 pub use db_loada_project_io::{DbLoadaProjectIO, DbLoadaProjectIOError};
+pub use load::{Load, LoadError};

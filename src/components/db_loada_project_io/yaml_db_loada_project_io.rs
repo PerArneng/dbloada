@@ -47,7 +47,7 @@ mod tests {
     use super::*;
     use crate::components::test_helpers::{InMemoryStringFile, TestLogger};
     use crate::components::db_loada_project_serialization::YamlDbLoadaProjectSerialization;
-    use crate::traits::DBLOADA_PROJECT_API_VERSION;
+    use crate::traits::{DBLOADA_PROJECT_API_VERSION, ProjectSpec};
     use std::path::PathBuf;
 
     fn make_io() -> (YamlDbLoadaProjectIO, std::rc::Rc<std::cell::RefCell<std::collections::HashMap<PathBuf, String>>>) {
@@ -62,6 +62,7 @@ mod tests {
         DBLoadaProject {
             name: name.to_string(),
             api_version: DBLOADA_PROJECT_API_VERSION.to_string(),
+            spec: ProjectSpec { tables: vec![] },
         }
     }
 

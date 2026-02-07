@@ -1,6 +1,8 @@
-use std::fs;
 use std::path::Path;
-use crate::traits::{Init, InitError, Logger};
+use crate::traits::{
+    DBLoadaProject, DbLoadaProjectIO, Init, InitError, Logger,
+    ProjectSpec, DBLOADA_PROJECT_API_VERSION,
+};
 
 pub fn sanitize_resource_name(raw: &str) -> String {
     let s: String = raw
@@ -62,11 +64,12 @@ pub fn validate_resource_name(name: &str) -> Result<(), String> {
 
 pub struct InitImpl {
     logger: Box<dyn Logger>,
+    project_io: Box<dyn DbLoadaProjectIO>,
 }
 
 impl InitImpl {
-    pub fn new(logger: Box<dyn Logger>) -> Self {
-        InitImpl { logger }
+    pub fn new(logger: Box<dyn Logger>, project_io: Box<dyn DbLoadaProjectIO>) -> Self {
+        InitImpl { logger, project_io }
     }
 
     fn resolve_name(path: &Path, name: Option<&str>) -> Result<String, InitError> {
@@ -100,18 +103,6 @@ impl InitImpl {
     }
 }
 
-pub fn build_project_yaml(name: &str) -> Result<String, String> {
-    validate_resource_name(name)?;
-    Ok(format!("\
-apiVersion: project.dbloada.io/v1
-kind: DBLoadaProject
-metadata:
-   name: {name}
-spec:
-   # spec goes here empty for now
-"))
-}
-
 impl Init for InitImpl {
     fn init(&self, path: &Path, name: Option<&str>) -> Result<(), InitError> {
         if !path.is_dir() {
@@ -120,15 +111,14 @@ impl Init for InitImpl {
 
         let project_name = Self::resolve_name(path, name)?;
 
-        let yaml = build_project_yaml(&project_name).map_err(|reason| {
-            InitError::InvalidResourceName {
-                name: project_name.clone(),
-                reason,
-            }
-        })?;
+        let project = DBLoadaProject {
+            name: project_name,
+            api_version: DBLOADA_PROJECT_API_VERSION.to_string(),
+            spec: ProjectSpec { tables: vec![] },
+        };
 
         let file_path = path.join("dbloada.yaml");
-        fs::write(&file_path, &yaml)?;
+        self.project_io.save(&project, &file_path)?;
 
         self.logger.info(&format!("created {}", file_path.display()));
         Ok(())

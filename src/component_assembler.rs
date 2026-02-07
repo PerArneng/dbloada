@@ -1,11 +1,12 @@
 use crate::components::logger::EnvLogger;
 use crate::components::db_loada_engine::DbLoadaEngineImpl;
 use crate::components::init::InitImpl;
+use crate::components::load::LoadImpl;
 use crate::components::string_file::DiskStringFile;
 use crate::components::db_loada_project_serialization::YamlDbLoadaProjectSerialization;
 use crate::components::db_loada_project_io::YamlDbLoadaProjectIO;
 use crate::traits::{
-    DbLoadaEngine, DbLoadaProjectIO, DbLoadaProjectSerialization, Init, Logger, StringFile,
+    DbLoadaEngine, DbLoadaProjectIO, DbLoadaProjectSerialization, Init, Load, Logger, StringFile,
 };
 
 pub struct ComponentAssembler;
@@ -20,11 +21,15 @@ impl ComponentAssembler {
     }
 
     pub fn init(&self) -> Box<dyn Init> {
-        Box::new(InitImpl::new(self.logger()))
+        Box::new(InitImpl::new(self.logger(), self.db_loada_project_io()))
+    }
+
+    pub fn load(&self) -> Box<dyn Load> {
+        Box::new(LoadImpl::new(self.logger(), self.db_loada_project_io()))
     }
 
     pub fn db_loada_engine(&self) -> Box<dyn DbLoadaEngine> {
-        Box::new(DbLoadaEngineImpl::new(self.logger(), self.init()))
+        Box::new(DbLoadaEngineImpl::new(self.logger(), self.init(), self.load()))
     }
 
     pub fn string_file(&self) -> Box<dyn StringFile> {

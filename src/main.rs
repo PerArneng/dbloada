@@ -26,6 +26,12 @@ enum Commands {
         #[arg(short, long)]
         name: Option<String>,
     },
+    /// Load a dbloada project from the given directory
+    Load {
+        /// Directory containing the dbloada.yaml project file
+        #[arg(short, long, default_value = ".")]
+        dir: PathBuf,
+    },
 }
 
 fn main() {
@@ -38,6 +44,15 @@ fn main() {
             if let Err(e) = engine.init_project_dir(&dir, name.as_deref()) {
                 eprintln!("Error: {e}");
                 process::exit(1);
+            }
+        }
+        Commands::Load { dir } => {
+            match engine.load_project(&dir) {
+                Ok(project) => println!("{:#?}", project),
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    process::exit(1);
+                }
             }
         }
     }

@@ -10,6 +10,8 @@ cargo run -- <command>         # run a subcommand (add RUST_LOG=info for log out
 cargo run -- init              # initialize current dir as a dbloada project
 cargo run -- init -d <dir>     # initialize a specific directory
 cargo run -- init -n <name>    # use an explicit project name
+cargo run -- load              # load project from current directory
+cargo run -- load -d <dir>     # load project from a specific directory
 cargo test                     # run all tests
 cargo test <name>              # run a single test by name
 ```
@@ -32,3 +34,4 @@ Dependencies are injected as `Box<dyn Trait>` via constructor parameters (`new()
 ## Skills
 
 - **`dbloada-component`** — Use when creating a new component. Covers the full workflow: trait, implementation, and `ComponentAssembler` wiring.
+- **`component-diagram`** — Use when rendering the component dependency diagram. Reads `ComponentAssembler`, generates a Graphviz DOT file, and renders it to PNG.
