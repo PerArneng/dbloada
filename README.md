@@ -4,11 +4,19 @@
 
 *<sub>D-B load-uh</sub>*
 
-DBLOADA compiles data from various data sources and builds a structured database based on that data.
-
 ## About
 
-Written in Rust, DBLOADA uses a micro component architecture with dependency injection for modularity, extensibility, and testability. Each capability is defined as a trait with concrete implementations wired together through a central composition root (`ComponentAssembler`), making it straightforward to swap, extend, or mock any part of the system.
+DBLOADA compiles data from various data sources and builds structured databases based on that data. It's main purpose
+is to build databases optimized for AI Agents and AI Assistants to consume so that they can quickly get the exact
+information they need by consuming minimal context. It's a commandline tool that reads a manifest file that contains
+information about static and dynamic data sources and then use that information to build a structured database in a
+SQL or Graph database. It also creates an Agent Skill that can be used by AI to understand how to query the database
+efficiently. 
+
+## Architecture
+Written in Rust, DBLOADA uses a micro component architecture with dependency injection for modularity, extensibility, 
+and testability. Each capability is defined as a trait with concrete implementations wired together through a central 
+composition root (`ComponentAssembler`), making it straightforward to swap, extend, or mock any part of the system.
 
 ## Getting Started
 
