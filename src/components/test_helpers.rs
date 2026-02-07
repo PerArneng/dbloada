@@ -40,4 +40,8 @@ impl StringFile for InMemoryStringFile {
                 source: std::io::Error::new(std::io::ErrorKind::NotFound, "not found in memory store"),
             })
     }
+
+    fn ensure_dir(&self, _path: &Path) -> Result<(), StringFileError> {
+        Ok(())
+    }
 }

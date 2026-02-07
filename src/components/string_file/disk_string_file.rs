@@ -15,6 +15,12 @@ impl DiskStringFile {
 impl StringFile for DiskStringFile {
     fn save(&self, content: &str, path: &Path) -> Result<(), StringFileError> {
         self.logger.debug(&format!("writing file: {}", path.display()));
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).map_err(|e| StringFileError::DirCreateError {
+                path: parent.to_path_buf(),
+                source: e,
+            })?;
+        }
         fs::write(path, content).map_err(|e| StringFileError::WriteError {
             path: path.to_path_buf(),
             source: e,
@@ -31,6 +37,16 @@ impl StringFile for DiskStringFile {
         })?;
         self.logger.info(&format!("read file: {}", path.display()));
         Ok(content)
+    }
+
+    fn ensure_dir(&self, path: &Path) -> Result<(), StringFileError> {
+        self.logger.debug(&format!("ensuring directory: {}", path.display()));
+        fs::create_dir_all(path).map_err(|e| StringFileError::DirCreateError {
+            path: path.to_path_buf(),
+            source: e,
+        })?;
+        self.logger.info(&format!("ensured directory: {}", path.display()));
+        Ok(())
     }
 }
 
@@ -68,7 +84,7 @@ mod tests {
     }
 
     #[test]
-    fn save_to_invalid_path_returns_write_error() {
+    fn save_to_invalid_path_returns_dir_create_error() {
         let logger = Box::new(TestLogger);
         let string_file = DiskStringFile::new(logger);
         let path = PathBuf::from("/nonexistent/directory/file.txt");
@@ -77,6 +93,44 @@ mod tests {
 
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(matches!(err, StringFileError::WriteError { .. }));
+        assert!(matches!(err, StringFileError::DirCreateError { .. }));
+    }
+
+    #[test]
+    fn save_creates_parent_directories() {
+        let logger = Box::new(TestLogger);
+        let string_file = DiskStringFile::new(logger);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("sub").join("dir").join("test.txt");
+
+        string_file.save("nested content", &path).unwrap();
+        let loaded = string_file.load(&path).unwrap();
+
+        assert_eq!(loaded, "nested content");
+    }
+
+    #[test]
+    fn ensure_dir_creates_directory() {
+        let logger = Box::new(TestLogger);
+        let string_file = DiskStringFile::new(logger);
+        let dir = tempfile::tempdir().unwrap();
+        let new_dir = dir.path().join("new_subdir");
+
+        string_file.ensure_dir(&new_dir).unwrap();
+
+        assert!(new_dir.is_dir());
+    }
+
+    #[test]
+    fn ensure_dir_invalid_path_returns_error() {
+        let logger = Box::new(TestLogger);
+        let string_file = DiskStringFile::new(logger);
+        let path = PathBuf::from("/nonexistent/root/dir");
+
+        let result = string_file.ensure_dir(&path);
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, StringFileError::DirCreateError { .. }));
     }
 }

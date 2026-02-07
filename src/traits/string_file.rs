@@ -13,9 +13,15 @@ pub enum StringFileError {
         path: PathBuf,
         source: std::io::Error,
     },
+    #[error("failed to create directory: {path}")]
+    DirCreateError {
+        path: PathBuf,
+        source: std::io::Error,
+    },
 }
 
 pub trait StringFile {
     fn save(&self, content: &str, path: &std::path::Path) -> Result<(), StringFileError>;
     fn load(&self, path: &std::path::Path) -> Result<String, StringFileError>;
+    fn ensure_dir(&self, path: &std::path::Path) -> Result<(), StringFileError>;
 }

@@ -21,7 +21,7 @@ impl ComponentAssembler {
     }
 
     pub fn init(&self) -> Box<dyn Init> {
-        Box::new(InitImpl::new(self.logger(), self.project_io()))
+        Box::new(InitImpl::new(self.logger(), self.project_io(), self.string_file()))
     }
 
     pub fn load(&self) -> Box<dyn Load> {

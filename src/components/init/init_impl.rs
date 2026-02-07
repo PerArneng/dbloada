@@ -1,7 +1,8 @@
 use std::path::Path;
 use crate::traits::{
-    Project, ProjectIO, Init, InitError, Logger,
-    ProjectSpec, PROJECT_API_VERSION,
+    Project, ProjectIO, Init, InitError, Logger, StringFile,
+    ProjectSpec, TableSpec, SourceSpec, ColumnSpec, ColumnIdentifier, ColumnType,
+    RelationshipSpec, PROJECT_API_VERSION,
 };
 
 pub fn sanitize_resource_name(raw: &str) -> String {
@@ -62,14 +63,120 @@ pub fn validate_resource_name(name: &str) -> Result<(), String> {
     Ok(())
 }
 
+pub fn example_project(name: &str) -> Project {
+    Project {
+        name: name.to_string(),
+        api_version: PROJECT_API_VERSION.to_string(),
+        spec: ProjectSpec {
+            tables: vec![
+                TableSpec {
+                    name: "country".to_string(),
+                    description: "Countries where cities and by extension offices are located in".to_string(),
+                    has_header: false,
+                    source: SourceSpec {
+                        filename: "data/countries.csv".to_string(),
+                        character_encoding: "utf-8".to_string(),
+                    },
+                    columns: vec![
+                        ColumnSpec {
+                            name: "name".to_string(),
+                            description: "The official name of the country".to_string(),
+                            column_identifier: ColumnIdentifier::Index(0),
+                            column_type: ColumnType::String { max_length: None },
+                        },
+                    ],
+                    relationships: vec![],
+                },
+                TableSpec {
+                    name: "city".to_string(),
+                    description: "Cities located within a country".to_string(),
+                    has_header: true,
+                    source: SourceSpec {
+                        filename: "data/cities.csv".to_string(),
+                        character_encoding: "utf-8".to_string(),
+                    },
+                    columns: vec![
+                        ColumnSpec {
+                            name: "name".to_string(),
+                            description: "The official name of the city".to_string(),
+                            column_identifier: ColumnIdentifier::Name("Name".to_string()),
+                            column_type: ColumnType::String { max_length: None },
+                        },
+                        ColumnSpec {
+                            name: "country".to_string(),
+                            description: "The country where the city is located in".to_string(),
+                            column_identifier: ColumnIdentifier::Name("Country".to_string()),
+                            column_type: ColumnType::String { max_length: None },
+                        },
+                    ],
+                    relationships: vec![
+                        RelationshipSpec {
+                            name: "located_in_country".to_string(),
+                            description: "The country where the city is located in".to_string(),
+                            source_column: "country".to_string(),
+                            target_table: "country".to_string(),
+                            target_column: "name".to_string(),
+                        },
+                    ],
+                },
+                TableSpec {
+                    name: "office".to_string(),
+                    description: "The physical building where people in this company work".to_string(),
+                    has_header: true,
+                    source: SourceSpec {
+                        filename: "data/offices.csv".to_string(),
+                        character_encoding: "utf-8".to_string(),
+                    },
+                    columns: vec![
+                        ColumnSpec {
+                            name: "building_name".to_string(),
+                            description: "The name of the building".to_string(),
+                            column_identifier: ColumnIdentifier::Name("Building Name".to_string()),
+                            column_type: ColumnType::String { max_length: None },
+                        },
+                        ColumnSpec {
+                            name: "location".to_string(),
+                            description: "The city where the office is located".to_string(),
+                            column_identifier: ColumnIdentifier::Name("Location".to_string()),
+                            column_type: ColumnType::String { max_length: None },
+                        },
+                    ],
+                    relationships: vec![
+                        RelationshipSpec {
+                            name: "located_in".to_string(),
+                            description: "The city where the office is located in".to_string(),
+                            source_column: "location".to_string(),
+                            target_table: "city".to_string(),
+                            target_column: "name".to_string(),
+                        },
+                    ],
+                },
+            ],
+        },
+    }
+}
+
+pub fn example_data_files() -> Vec<(&'static str, &'static str)> {
+    vec![
+        ("data/countries.csv", "\"United Kingdom\"\n\"Germany\"\n"),
+        ("data/cities.csv", "\"Name\", \"Country\"\n\"London\", \"United Kingdom\"\n\"Berlin\", \"Germany\"\n"),
+        ("data/offices.csv", "\"Building Name\", \"Location\"\n\"Star Tower\", \"London\"\n\"Mercator II\", \"Berlin\"\n"),
+    ]
+}
+
+pub fn example_directories() -> Vec<&'static str> {
+    vec!["data", "scripts"]
+}
+
 pub struct InitImpl {
     logger: Box<dyn Logger>,
     project_io: Box<dyn ProjectIO>,
+    string_file: Box<dyn StringFile>,
 }
 
 impl InitImpl {
-    pub fn new(logger: Box<dyn Logger>, project_io: Box<dyn ProjectIO>) -> Self {
-        InitImpl { logger, project_io }
+    pub fn new(logger: Box<dyn Logger>, project_io: Box<dyn ProjectIO>, string_file: Box<dyn StringFile>) -> Self {
+        InitImpl { logger, project_io, string_file }
     }
 
     fn resolve_name(path: &Path, name: Option<&str>) -> Result<String, InitError> {
@@ -111,16 +218,96 @@ impl Init for InitImpl {
 
         let project_name = Self::resolve_name(path, name)?;
 
-        let project = Project {
-            name: project_name,
-            api_version: PROJECT_API_VERSION.to_string(),
-            spec: ProjectSpec { tables: vec![] },
-        };
+        for dir in example_directories() {
+            let dir_path = path.join(dir);
+            self.string_file.ensure_dir(&dir_path)?;
+            self.logger.info(&format!("created directory: {}", dir_path.display()));
+        }
+
+        for (relative_path, content) in example_data_files() {
+            let file_path = path.join(relative_path);
+            self.string_file.save(content, &file_path)?;
+            self.logger.info(&format!("created {}", file_path.display()));
+        }
+
+        let project = example_project(&project_name);
 
         let file_path = path.join("dbloada.yaml");
         self.project_io.save(&project, &file_path)?;
 
         self.logger.info(&format!("created {}", file_path.display()));
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn example_project_has_three_tables() {
+        let project = example_project("test");
+        assert_eq!(project.spec.tables.len(), 3);
+    }
+
+    #[test]
+    fn example_project_table_names() {
+        let project = example_project("test");
+        let names: Vec<&str> = project.spec.tables.iter().map(|t| t.name.as_str()).collect();
+        assert_eq!(names, vec!["country", "city", "office"]);
+    }
+
+    #[test]
+    fn example_project_uses_given_name() {
+        let project = example_project("my-project");
+        assert_eq!(project.name, "my-project");
+    }
+
+    #[test]
+    fn example_project_has_correct_api_version() {
+        let project = example_project("test");
+        assert_eq!(project.api_version, PROJECT_API_VERSION);
+    }
+
+    #[test]
+    fn example_project_city_has_relationship_to_country() {
+        let project = example_project("test");
+        let city = &project.spec.tables[1];
+        assert_eq!(city.relationships.len(), 1);
+        assert_eq!(city.relationships[0].target_table, "country");
+    }
+
+    #[test]
+    fn example_project_office_has_relationship_to_city() {
+        let project = example_project("test");
+        let office = &project.spec.tables[2];
+        assert_eq!(office.relationships.len(), 1);
+        assert_eq!(office.relationships[0].target_table, "city");
+    }
+
+    #[test]
+    fn example_data_files_has_three_entries() {
+        let files = example_data_files();
+        assert_eq!(files.len(), 3);
+    }
+
+    #[test]
+    fn example_data_files_paths_match_sources() {
+        let project = example_project("test");
+        let files = example_data_files();
+        let file_paths: Vec<&str> = files.iter().map(|(p, _)| *p).collect();
+        for table in &project.spec.tables {
+            assert!(
+                file_paths.contains(&table.source.filename.as_str()),
+                "source filename '{}' not found in example data files",
+                table.source.filename
+            );
+        }
+    }
+
+    #[test]
+    fn example_directories_contains_data_and_scripts() {
+        let dirs = example_directories();
+        assert_eq!(dirs, vec!["data", "scripts"]);
     }
 }
