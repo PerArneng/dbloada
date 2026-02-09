@@ -23,9 +23,10 @@ efficiently.
 
 
 ## Architecture
-Written in Rust, DBLOADA uses a micro component architecture with dependency injection for modularity, extensibility, 
-and testability. Each capability is defined as a trait with concrete implementations wired together through a central 
+Written in Rust, DBLOADA uses a micro component architecture with dependency injection for modularity, extensibility,
+and testability. Each capability is defined as an async trait with concrete implementations wired together through a central
 composition root (`ComponentAssembler`), making it straightforward to swap, extend, or mock any part of the system.
+The async runtime is powered by tokio.
 
 ## Getting Started
 

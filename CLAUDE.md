@@ -29,6 +29,8 @@ dbloada uses a **trait + implementation** pattern with a **composition root** fo
 
 Dependencies are injected as `Box<dyn Trait>` via constructor parameters (`new()`).
 
+**Async** — All traits use `#[async_trait]` with `Send + Sync` supertraits, and the runtime is `tokio`. File I/O uses `tokio::fs`, logging uses `tokio::io::stdout()`. Tests that exercise async code use `#[tokio::test]`; pure function tests remain `#[test]`.
+
 **Pure functions** — Prefer pure functions for all logic (validation, transformation, formatting, etc.). Pure functions are deterministic, side-effect-free, and easy to test in isolation. Place them as public free functions in the relevant component file (e.g. `validate_resource_name` and `sanitize_resource_name` in `init_impl.rs`). Reserve methods on impl structs for orchestration that involves dependencies (I/O, logging).
 
 ## Skills
