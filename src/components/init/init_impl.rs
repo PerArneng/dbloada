@@ -1,10 +1,10 @@
 use std::path::Path;
 use async_trait::async_trait;
-use crate::traits::{
-    Project, ProjectIO, Init, InitError, Logger, FileSystem,
-    ProjectSpec, TableSpec, SourceSpec, ColumnSpec, ColumnIdentifier, ColumnType,
+use crate::models::{
+    Project, ProjectSpec, TableSpec, SourceSpec, ColumnSpec, ColumnIdentifier, ColumnType,
     RelationshipSpec, PROJECT_API_VERSION,
 };
+use crate::traits::{ProjectIO, Init, InitError, Logger, FileSystem};
 
 pub fn sanitize_resource_name(raw: &str) -> String {
     let s: String = raw

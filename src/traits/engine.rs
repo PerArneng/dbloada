@@ -2,7 +2,7 @@ use std::path::Path;
 use async_trait::async_trait;
 use super::init::InitError;
 use super::load::LoadError;
-use super::project_serialization::Project;
+use crate::models::Project;
 
 #[async_trait]
 pub trait Engine: Send + Sync {

@@ -1,4 +1,5 @@
 mod traits;
+mod models;
 mod components;
 mod component_assembler;
 

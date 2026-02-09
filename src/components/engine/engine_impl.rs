@@ -1,6 +1,7 @@
 use std::path::Path;
 use async_trait::async_trait;
-use crate::traits::{Project, Engine, Init, InitError, Load, LoadError, Logger};
+use crate::models::Project;
+use crate::traits::{Engine, Init, InitError, Load, LoadError, Logger};
 
 pub struct EngineImpl {
     logger: Box<dyn Logger>,

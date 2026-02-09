@@ -1,7 +1,8 @@
 use std::path::Path;
 use async_trait::async_trait;
+use crate::models::Project;
 use crate::traits::{
-    Project, ProjectIO, ProjectIOError,
+    ProjectIO, ProjectIOError,
     ProjectSerialization, Logger, FileSystem,
 };
 
@@ -49,7 +50,7 @@ mod tests {
     use super::*;
     use crate::components::test_helpers::{InMemoryFileSystem, TestLogger};
     use crate::components::project_serialization::YamlProjectSerialization;
-    use crate::traits::{PROJECT_API_VERSION, ProjectSpec};
+    use crate::models::{PROJECT_API_VERSION, ProjectSpec};
     use std::collections::HashMap;
     use std::path::PathBuf;
     use std::sync::Arc;

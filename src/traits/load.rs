@@ -1,7 +1,7 @@
 use std::path::Path;
 use async_trait::async_trait;
 use thiserror::Error;
-use super::project_serialization::Project;
+use crate::models::Project;
 use super::project_io::ProjectIOError;
 
 #[derive(Debug, Error)]

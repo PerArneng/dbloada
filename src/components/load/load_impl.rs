@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use async_trait::async_trait;
-use crate::traits::{Project, ProjectIO, Load, LoadError, Logger};
+use crate::models::Project;
+use crate::traits::{ProjectIO, Load, LoadError, Logger};
 
 pub const DBLOADA_PROJECT_FILENAME: &str = "dbloada.yaml";
 

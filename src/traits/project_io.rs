@@ -2,7 +2,8 @@ use std::path::Path;
 use async_trait::async_trait;
 use thiserror::Error;
 use super::file_system::FileSystemError;
-use super::project_serialization::{Project, ProjectSerializationError};
+use crate::models::Project;
+use super::project_serialization::ProjectSerializationError;
 
 #[derive(Debug, Error)]
 pub enum ProjectIOError {

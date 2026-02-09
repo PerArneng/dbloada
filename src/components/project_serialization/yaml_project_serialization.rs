@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
-use crate::traits::{
-    Project, ProjectSerialization, ProjectSerializationError,
-    PROJECT_KIND, Logger,
+use crate::models::{
+    Project, PROJECT_KIND,
     ProjectSpec, TableSpec, SourceSpec, ColumnSpec, ColumnIdentifier, ColumnType, RelationshipSpec,
 };
+use crate::traits::{ProjectSerialization, ProjectSerializationError, Logger};
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -270,7 +270,7 @@ impl ProjectSerialization for YamlProjectSerialization {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::PROJECT_API_VERSION;
+    use crate::models::PROJECT_API_VERSION;
 
     fn empty_spec_project(name: &str) -> Project {
         Project {
