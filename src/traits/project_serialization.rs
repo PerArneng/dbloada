@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use thiserror::Error;
 
 pub const PROJECT_API_VERSION: &str = "project.dbloada.io/v1";
@@ -70,7 +71,8 @@ pub enum ProjectSerializationError {
     UnexpectedKind { expected: String, actual: String },
 }
 
-pub trait ProjectSerialization {
-    fn serialize(&self, project: &Project) -> Result<String, ProjectSerializationError>;
-    fn deserialize(&self, content: &str) -> Result<Project, ProjectSerializationError>;
+#[async_trait]
+pub trait ProjectSerialization: Send + Sync {
+    async fn serialize(&self, project: &Project) -> Result<String, ProjectSerializationError>;
+    async fn deserialize(&self, content: &str) -> Result<Project, ProjectSerializationError>;
 }

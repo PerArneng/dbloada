@@ -1,4 +1,5 @@
 use std::path::Path;
+use async_trait::async_trait;
 use crate::traits::{
     Project, ProjectIO, Init, InitError, Logger, FileSystem,
     ProjectSpec, TableSpec, SourceSpec, ColumnSpec, ColumnIdentifier, ColumnType,
@@ -210,9 +211,11 @@ impl InitImpl {
     }
 }
 
+#[async_trait]
 impl Init for InitImpl {
-    fn init(&self, path: &Path, name: Option<&str>) -> Result<(), InitError> {
-        if !path.is_dir() {
+    async fn init(&self, path: &Path, name: Option<&str>) -> Result<(), InitError> {
+        let metadata = tokio::fs::metadata(path).await;
+        if metadata.is_err() || !metadata.unwrap().is_dir() {
             return Err(InitError::DirectoryNotFound(path.display().to_string()));
         }
 
@@ -220,22 +223,22 @@ impl Init for InitImpl {
 
         for dir in example_directories() {
             let dir_path = path.join(dir);
-            self.file_system.ensure_dir(&dir_path)?;
-            self.logger.info(&format!("created directory: {}", dir_path.display()));
+            self.file_system.ensure_dir(&dir_path).await?;
+            self.logger.info(&format!("created directory: {}", dir_path.display())).await;
         }
 
         for (relative_path, content) in example_data_files() {
             let file_path = path.join(relative_path);
-            self.file_system.save(content, &file_path)?;
-            self.logger.info(&format!("created {}", file_path.display()));
+            self.file_system.save(content, &file_path).await?;
+            self.logger.info(&format!("created {}", file_path.display())).await;
         }
 
         let project = example_project(&project_name);
 
         let file_path = path.join("dbloada.yaml");
-        self.project_io.save(&project, &file_path)?;
+        self.project_io.save(&project, &file_path).await?;
 
-        self.logger.info(&format!("created {}", file_path.display()));
+        self.logger.info(&format!("created {}", file_path.display())).await;
         Ok(())
     }
 }

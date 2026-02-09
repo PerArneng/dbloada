@@ -34,20 +34,21 @@ enum Commands {
     },
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let cli = Cli::parse();
     let assembler = ComponentAssembler::new();
     let engine = assembler.engine();
 
     match cli.command {
         Commands::Init { dir, name } => {
-            if let Err(e) = engine.init_project_dir(&dir, name.as_deref()) {
+            if let Err(e) = engine.init_project_dir(&dir, name.as_deref()).await {
                 eprintln!("Error: {e}");
                 process::exit(1);
             }
         }
         Commands::Load { dir } => {
-            match engine.load_project(&dir) {
+            match engine.load_project(&dir).await {
                 Ok(project) => println!("{:#?}", project),
                 Err(e) => {
                     eprintln!("Error: {e}");

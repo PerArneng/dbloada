@@ -1,4 +1,5 @@
 use std::path::Path;
+use async_trait::async_trait;
 use thiserror::Error;
 use super::project_io::ProjectIOError;
 use super::file_system::FileSystemError;
@@ -17,6 +18,7 @@ pub enum InitError {
     FileError(#[from] FileSystemError),
 }
 
-pub trait Init {
-    fn init(&self, path: &Path, name: Option<&str>) -> Result<(), InitError>;
+#[async_trait]
+pub trait Init: Send + Sync {
+    async fn init(&self, path: &Path, name: Option<&str>) -> Result<(), InitError>;
 }

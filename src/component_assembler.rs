@@ -1,4 +1,4 @@
-use crate::components::logger::EnvLogger;
+use crate::components::logger::TokioLogger;
 use crate::components::engine::EngineImpl;
 use crate::components::init::InitImpl;
 use crate::components::load::LoadImpl;
@@ -17,7 +17,7 @@ impl ComponentAssembler {
     }
 
     pub fn logger(&self) -> Box<dyn Logger> {
-        Box::new(EnvLogger::new())
+        Box::new(TokioLogger::new())
     }
 
     pub fn init(&self) -> Box<dyn Init> {

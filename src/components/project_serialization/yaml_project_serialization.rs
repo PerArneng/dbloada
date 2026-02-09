@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use async_trait::async_trait;
 use crate::traits::{
     Project, ProjectSerialization, ProjectSerializationError,
     PROJECT_KIND, Logger,
@@ -249,18 +250,19 @@ impl YamlProjectSerialization {
     }
 }
 
+#[async_trait]
 impl ProjectSerialization for YamlProjectSerialization {
-    fn serialize(&self, project: &Project) -> Result<String, ProjectSerializationError> {
-        self.logger.debug(&format!("serializing project: {}", project.name));
+    async fn serialize(&self, project: &Project) -> Result<String, ProjectSerializationError> {
+        self.logger.debug(&format!("serializing project: {}", project.name)).await;
         let result = serialize_to_yaml(project)?;
-        self.logger.info(&format!("serialized project: {}", project.name));
+        self.logger.info(&format!("serialized project: {}", project.name)).await;
         Ok(result)
     }
 
-    fn deserialize(&self, content: &str) -> Result<Project, ProjectSerializationError> {
-        self.logger.debug("deserializing project");
+    async fn deserialize(&self, content: &str) -> Result<Project, ProjectSerializationError> {
+        self.logger.debug("deserializing project").await;
         let project = deserialize_from_yaml(content)?;
-        self.logger.info(&format!("deserialized project: {}", project.name));
+        self.logger.info(&format!("deserialized project: {}", project.name)).await;
         Ok(project)
     }
 }

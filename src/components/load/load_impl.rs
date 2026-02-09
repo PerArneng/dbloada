@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use async_trait::async_trait;
 use crate::traits::{Project, ProjectIO, Load, LoadError, Logger};
 
 pub const DBLOADA_PROJECT_FILENAME: &str = "dbloada.yaml";
@@ -18,20 +19,23 @@ impl LoadImpl {
     }
 }
 
+#[async_trait]
 impl Load for LoadImpl {
-    fn load(&self, path: &Path) -> Result<Project, LoadError> {
-        if !path.is_dir() {
+    async fn load(&self, path: &Path) -> Result<Project, LoadError> {
+        let metadata = tokio::fs::metadata(path).await;
+        if metadata.is_err() || !metadata.unwrap().is_dir() {
             return Err(LoadError::DirectoryNotFound(path.display().to_string()));
         }
 
         let file_path = project_file_path(path);
-        if !file_path.exists() {
+        let file_metadata = tokio::fs::metadata(&file_path).await;
+        if file_metadata.is_err() {
             return Err(LoadError::ProjectFileNotFound(file_path.display().to_string()));
         }
 
-        self.logger.debug(&format!("loading project from: {}", file_path.display()));
-        let project = self.project_io.load(&file_path)?;
-        self.logger.info(&format!("loaded project '{}' from: {}", project.name, file_path.display()));
+        self.logger.debug(&format!("loading project from: {}", file_path.display())).await;
+        let project = self.project_io.load(&file_path).await?;
+        self.logger.info(&format!("loaded project '{}' from: {}", project.name, file_path.display())).await;
         Ok(project)
     }
 }
@@ -52,17 +56,17 @@ mod tests {
         assert_eq!(path, PathBuf::from("/some/dir/dbloada.yaml"));
     }
 
-    #[test]
-    fn load_returns_error_for_nonexistent_directory() {
+    #[tokio::test]
+    async fn load_returns_error_for_nonexistent_directory() {
         use crate::components::test_helpers::TestLogger;
         use crate::components::project_io::YamlProjectIO;
         use crate::components::project_serialization::YamlProjectSerialization;
         use crate::components::test_helpers::InMemoryFileSystem;
-        use std::rc::Rc;
-        use std::cell::RefCell;
+        use std::sync::Arc;
+        use tokio::sync::Mutex;
         use std::collections::HashMap;
 
-        let store = Rc::new(RefCell::new(HashMap::new()));
+        let store = Arc::new(Mutex::new(HashMap::new()));
         let file_system = Box::new(InMemoryFileSystem::new(store));
         let serialization = Box::new(YamlProjectSerialization::new(Box::new(TestLogger)));
         let project_io = Box::new(YamlProjectIO::new(
@@ -72,7 +76,7 @@ mod tests {
         ));
         let loader = LoadImpl::new(Box::new(TestLogger), project_io);
 
-        let result = loader.load(Path::new("/nonexistent/dir"));
+        let result = loader.load(Path::new("/nonexistent/dir")).await;
         assert!(matches!(result, Err(LoadError::DirectoryNotFound(_))));
     }
 }

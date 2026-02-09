@@ -1,3 +1,3 @@
-pub mod env_logger;
+pub mod tokio_logger;
 
-pub use env_logger::EnvLogger;
+pub use tokio_logger::TokioLogger;

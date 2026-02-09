@@ -1,4 +1,5 @@
 use std::path::Path;
+use async_trait::async_trait;
 use crate::traits::{Project, Engine, Init, InitError, Load, LoadError, Logger};
 
 pub struct EngineImpl {
@@ -13,16 +14,17 @@ impl EngineImpl {
     }
 }
 
+#[async_trait]
 impl Engine for EngineImpl {
-    fn init(&self) {
-        self.logger.info("hello");
+    async fn init(&self) {
+        self.logger.info("hello").await;
     }
 
-    fn init_project_dir(&self, path: &Path, name: Option<&str>) -> Result<(), InitError> {
-        self.init.init(path, name)
+    async fn init_project_dir(&self, path: &Path, name: Option<&str>) -> Result<(), InitError> {
+        self.init.init(path, name).await
     }
 
-    fn load_project(&self, path: &Path) -> Result<Project, LoadError> {
-        self.load.load(path)
+    async fn load_project(&self, path: &Path) -> Result<Project, LoadError> {
+        self.load.load(path).await
     }
 }

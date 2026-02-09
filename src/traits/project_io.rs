@@ -1,4 +1,5 @@
 use std::path::Path;
+use async_trait::async_trait;
 use thiserror::Error;
 use super::file_system::FileSystemError;
 use super::project_serialization::{Project, ProjectSerializationError};
@@ -11,7 +12,8 @@ pub enum ProjectIOError {
     SerializationError(#[from] ProjectSerializationError),
 }
 
-pub trait ProjectIO {
-    fn load(&self, path: &Path) -> Result<Project, ProjectIOError>;
-    fn save(&self, project: &Project, path: &Path) -> Result<(), ProjectIOError>;
+#[async_trait]
+pub trait ProjectIO: Send + Sync {
+    async fn load(&self, path: &Path) -> Result<Project, ProjectIOError>;
+    async fn save(&self, project: &Project, path: &Path) -> Result<(), ProjectIOError>;
 }

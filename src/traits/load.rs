@@ -1,4 +1,5 @@
 use std::path::Path;
+use async_trait::async_trait;
 use thiserror::Error;
 use super::project_serialization::Project;
 use super::project_io::ProjectIOError;
@@ -13,6 +14,7 @@ pub enum LoadError {
     IOError(#[from] ProjectIOError),
 }
 
-pub trait Load {
-    fn load(&self, path: &Path) -> Result<Project, LoadError>;
+#[async_trait]
+pub trait Load: Send + Sync {
+    async fn load(&self, path: &Path) -> Result<Project, LoadError>;
 }
