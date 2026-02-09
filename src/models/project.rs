@@ -45,8 +45,7 @@ pub enum ColumnIdentifier {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ColumnType {
-    String { max_length: Option<u64> },
-    Int64,
+    String,
 }
 
 #[derive(Debug, Clone, PartialEq)]

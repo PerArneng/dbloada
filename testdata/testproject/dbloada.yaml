@@ -26,11 +26,11 @@ spec:
         - name: name
           description: The official name of the city
           columnIdentifier: "Name" # name in quotes or index (0 based)
-          type: string # string(maxLength), string or int64
+          type: string
         - name: country
           description: The country where the city is located in
           columnIdentifier: "Country" # name in quotes or index (0 based)
-          type: string # string(50) # a string with 50 characters max length
+          type: string
       relationships:
         - name: located_in_country
           description: The country where the city is located in
@@ -47,11 +47,11 @@ spec:
         - name: building_name
           description: The name of the building as referred to by the people who work in the company or an official name.
           columnIdentifier: "Building Name" # name in quotes or index (0 based)
-          type: string # string(maxLength), string or int64
+          type: string
         - name: location
           description: The city where the office is located.
           columnIdentifier: "Location" # name in quotes or index (0 based)
-          type: string # string(50) # a string with 50 characters max length
+          type: string
       relationships:
         - name: located_in
           description: The city where a the office is located in.

@@ -75,31 +75,15 @@ struct RelationshipSpecYaml {
 
 pub fn parse_column_type(s: &str) -> Result<ColumnType, String> {
     let trimmed = s.trim();
-    if trimmed == "int64" {
-        return Ok(ColumnType::Int64);
-    }
     if trimmed == "string" {
-        return Ok(ColumnType::String { max_length: None });
-    }
-    if trimmed.starts_with("string(") && trimmed.ends_with(')') {
-        let inner = &trimmed[7..trimmed.len() - 1];
-        let max_length: u64 = inner
-            .parse()
-            .map_err(|_| format!("invalid max_length in type '{trimmed}'"))?;
-        return Ok(ColumnType::String {
-            max_length: Some(max_length),
-        });
+        return Ok(ColumnType::String);
     }
     Err(format!("unknown column type: '{trimmed}'"))
 }
 
 pub fn column_type_to_string(ct: &ColumnType) -> String {
     match ct {
-        ColumnType::String { max_length: None } => "string".to_string(),
-        ColumnType::String {
-            max_length: Some(len),
-        } => format!("string({len})"),
-        ColumnType::Int64 => "int64".to_string(),
+        ColumnType::String => "string".to_string(),
     }
 }
 
@@ -476,39 +460,19 @@ mod tests {
     fn parse_column_type_string() {
         assert_eq!(
             parse_column_type("string"),
-            Ok(ColumnType::String { max_length: None })
+            Ok(ColumnType::String)
         );
-    }
-
-    #[test]
-    fn parse_column_type_string_with_max_length() {
-        assert_eq!(
-            parse_column_type("string(50)"),
-            Ok(ColumnType::String {
-                max_length: Some(50)
-            })
-        );
-    }
-
-    #[test]
-    fn parse_column_type_int64() {
-        assert_eq!(parse_column_type("int64"), Ok(ColumnType::Int64));
     }
 
     #[test]
     fn parse_column_type_unknown_returns_error() {
         assert!(parse_column_type("boolean").is_err());
+        assert!(parse_column_type("int64").is_err());
     }
 
     #[test]
     fn column_type_to_string_roundtrip() {
-        let types = vec![
-            ColumnType::String { max_length: None },
-            ColumnType::String {
-                max_length: Some(100),
-            },
-            ColumnType::Int64,
-        ];
+        let types = vec![ColumnType::String];
         for ct in types {
             let s = column_type_to_string(&ct);
             let parsed = parse_column_type(&s).unwrap();
@@ -550,7 +514,7 @@ spec:
         - name: country
           description: Country
           columnIdentifier: "Country"
-          type: string(50)
+          type: string
       relationships:
         - name: located_in_country
           description: Country where city is
@@ -568,7 +532,7 @@ spec:
         assert_eq!(country.source.filename, "data/countries.csv");
         assert_eq!(country.columns.len(), 1);
         assert_eq!(country.columns[0].column_identifier, ColumnIdentifier::Index(0));
-        assert_eq!(country.columns[0].column_type, ColumnType::String { max_length: None });
+        assert_eq!(country.columns[0].column_type, ColumnType::String);
         assert!(country.relationships.is_empty());
 
         let city = &project.spec.tables[1];
@@ -576,12 +540,7 @@ spec:
         assert!(city.has_header);
         assert_eq!(city.columns.len(), 2);
         assert_eq!(city.columns[0].column_identifier, ColumnIdentifier::Name("Name".to_string()));
-        assert_eq!(
-            city.columns[1].column_type,
-            ColumnType::String {
-                max_length: Some(50)
-            }
-        );
+        assert_eq!(city.columns[1].column_type, ColumnType::String);
         assert_eq!(city.relationships.len(), 1);
         assert_eq!(city.relationships[0].name, "located_in_country");
         assert_eq!(city.relationships[0].target_table, "country");
@@ -602,10 +561,10 @@ spec:
                         character_encoding: "utf-8".to_string(),
                     },
                     columns: vec![ColumnSpec {
-                        name: "id".to_string(),
-                        description: "User ID".to_string(),
+                        name: "name".to_string(),
+                        description: "User name".to_string(),
                         column_identifier: ColumnIdentifier::Index(0),
-                        column_type: ColumnType::Int64,
+                        column_type: ColumnType::String,
                     }],
                     relationships: vec![],
                 }],
