@@ -8,7 +8,7 @@ use clap::{Parser, Subcommand};
 use component_assembler::ComponentAssembler;
 
 #[derive(Parser)]
-#[command(name = "dbloada")]
+#[command(name = "dbloada", version = env!("CARGO_PKG_VERSION"))]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
