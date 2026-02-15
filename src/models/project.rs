@@ -24,8 +24,22 @@ pub struct TableSpec {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct SourceSpec {
+pub enum SourceSpec {
+    File(FileSourceSpec),
+    Cmd(CmdSourceSpec),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FileSourceSpec {
     pub filename: String,
+    pub character_encoding: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CmdSourceSpec {
+    pub command: String,
+    pub args: Vec<String>,
+    pub stdout: bool,
     pub character_encoding: String,
 }
 

@@ -2,7 +2,8 @@ use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
 use crate::models::{
     Project, PROJECT_KIND,
-    ProjectSpec, TableSpec, SourceSpec, ColumnSpec, ColumnIdentifier, ColumnType, RelationshipSpec,
+    ProjectSpec, TableSpec, SourceSpec, FileSourceSpec, CmdSourceSpec,
+    ColumnSpec, ColumnIdentifier, ColumnType, RelationshipSpec,
 };
 use crate::traits::{ProjectSerialization, ProjectSerializationError, Logger};
 
@@ -40,9 +41,33 @@ struct TableSpecYaml {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(tag = "type")]
+enum SourceSpecYaml {
+    #[serde(rename = "file")]
+    File(FileSourceSpecYaml),
+    #[serde(rename = "cmd")]
+    Cmd(CmdSourceSpecYaml),
+}
+
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct SourceSpecYaml {
+struct FileSourceSpecYaml {
     filename: String,
+    character_encoding: String,
+}
+
+fn default_stdout() -> bool {
+    true
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CmdSourceSpecYaml {
+    command: String,
+    #[serde(default)]
+    args: Vec<String>,
+    #[serde(default = "default_stdout")]
+    stdout: bool,
     character_encoding: String,
 }
 
@@ -98,12 +123,24 @@ fn table_to_yaml(table: &TableSpec) -> TableSpecYaml {
         name: table.name.clone(),
         description: table.description.clone(),
         has_header: table.has_header,
-        source: SourceSpecYaml {
-            filename: table.source.filename.clone(),
-            character_encoding: table.source.character_encoding.clone(),
-        },
+        source: source_to_yaml(&table.source),
         columns: table.columns.iter().map(column_to_yaml).collect(),
         relationships: table.relationships.iter().map(relationship_to_yaml).collect(),
+    }
+}
+
+fn source_to_yaml(source: &SourceSpec) -> SourceSpecYaml {
+    match source {
+        SourceSpec::File(fs) => SourceSpecYaml::File(FileSourceSpecYaml {
+            filename: fs.filename.clone(),
+            character_encoding: fs.character_encoding.clone(),
+        }),
+        SourceSpec::Cmd(cs) => SourceSpecYaml::Cmd(CmdSourceSpecYaml {
+            command: cs.command.clone(),
+            args: cs.args.clone(),
+            stdout: cs.stdout,
+            character_encoding: cs.character_encoding.clone(),
+        }),
     }
 }
 
@@ -153,10 +190,7 @@ fn table_from_yaml(yaml: TableSpecYaml) -> Result<TableSpec, ProjectSerializatio
         name: yaml.name,
         description: yaml.description,
         has_header: yaml.has_header,
-        source: SourceSpec {
-            filename: yaml.source.filename,
-            character_encoding: yaml.source.character_encoding,
-        },
+        source: source_from_yaml(yaml.source),
         columns,
         relationships: yaml
             .relationships
@@ -170,6 +204,21 @@ fn table_from_yaml(yaml: TableSpecYaml) -> Result<TableSpec, ProjectSerializatio
             })
             .collect(),
     })
+}
+
+fn source_from_yaml(yaml: SourceSpecYaml) -> SourceSpec {
+    match yaml {
+        SourceSpecYaml::File(fs) => SourceSpec::File(FileSourceSpec {
+            filename: fs.filename,
+            character_encoding: fs.character_encoding,
+        }),
+        SourceSpecYaml::Cmd(cs) => SourceSpec::Cmd(CmdSourceSpec {
+            command: cs.command,
+            args: cs.args,
+            stdout: cs.stdout,
+            character_encoding: cs.character_encoding,
+        }),
+    }
 }
 
 fn column_from_yaml(yaml: ColumnSpecYaml) -> Result<ColumnSpec, ProjectSerializationError> {
@@ -481,7 +530,7 @@ mod tests {
     }
 
     #[test]
-    fn deserialize_full_spec_yaml() {
+    fn deserialize_full_spec_yaml_with_file_source() {
         let yaml = r#"
 apiVersion: project.dbloada.io/v1
 kind: DBLoadaProject
@@ -493,6 +542,7 @@ spec:
       description: Countries
       hasHeader: false
       source:
+        type: file
         filename: data/countries.csv
         characterEncoding: utf-8
       columns:
@@ -504,6 +554,7 @@ spec:
       description: Cities
       hasHeader: true
       source:
+        type: file
         filename: data/cities.csv
         characterEncoding: utf-8
       columns:
@@ -529,7 +580,13 @@ spec:
         let country = &project.spec.tables[0];
         assert_eq!(country.name, "country");
         assert!(!country.has_header);
-        assert_eq!(country.source.filename, "data/countries.csv");
+        match &country.source {
+            SourceSpec::File(fs) => {
+                assert_eq!(fs.filename, "data/countries.csv");
+                assert_eq!(fs.character_encoding, "utf-8");
+            }
+            _ => panic!("expected File source"),
+        }
         assert_eq!(country.columns.len(), 1);
         assert_eq!(country.columns[0].column_identifier, ColumnIdentifier::Index(0));
         assert_eq!(country.columns[0].column_type, ColumnType::String);
@@ -547,7 +604,72 @@ spec:
     }
 
     #[test]
-    fn round_trip_with_full_spec() {
+    fn deserialize_cmd_source() {
+        let yaml = r#"
+apiVersion: project.dbloada.io/v1
+kind: DBLoadaProject
+metadata:
+  name: test
+spec:
+  tables:
+    - name: employee
+      description: Employees
+      hasHeader: true
+      source:
+        type: cmd
+        command: bash
+        args:
+          - scripts/generate-employees.sh
+        stdout: true
+        characterEncoding: utf-8
+      columns:
+        - name: name
+          description: Employee name
+          columnIdentifier: "Name"
+          type: string
+"#;
+        let project = deserialize_from_yaml(yaml).unwrap();
+        let employee = &project.spec.tables[0];
+        match &employee.source {
+            SourceSpec::Cmd(cs) => {
+                assert_eq!(cs.command, "bash");
+                assert_eq!(cs.args, vec!["scripts/generate-employees.sh"]);
+                assert!(cs.stdout);
+                assert_eq!(cs.character_encoding, "utf-8");
+            }
+            _ => panic!("expected Cmd source"),
+        }
+    }
+
+    #[test]
+    fn deserialize_cmd_source_stdout_defaults_to_true() {
+        let yaml = r#"
+apiVersion: project.dbloada.io/v1
+kind: DBLoadaProject
+metadata:
+  name: test
+spec:
+  tables:
+    - name: t
+      description: test
+      hasHeader: true
+      source:
+        type: cmd
+        command: bash
+        args:
+          - script.sh
+        characterEncoding: utf-8
+      columns: []
+"#;
+        let project = deserialize_from_yaml(yaml).unwrap();
+        match &project.spec.tables[0].source {
+            SourceSpec::Cmd(cs) => assert!(cs.stdout),
+            _ => panic!("expected Cmd source"),
+        }
+    }
+
+    #[test]
+    fn round_trip_with_file_source() {
         let project = Project {
             name: "test".to_string(),
             api_version: PROJECT_API_VERSION.to_string(),
@@ -556,14 +678,45 @@ spec:
                     name: "users".to_string(),
                     description: "User table".to_string(),
                     has_header: true,
-                    source: SourceSpec {
+                    source: SourceSpec::File(FileSourceSpec {
                         filename: "data/users.csv".to_string(),
                         character_encoding: "utf-8".to_string(),
-                    },
+                    }),
                     columns: vec![ColumnSpec {
                         name: "name".to_string(),
                         description: "User name".to_string(),
                         column_identifier: ColumnIdentifier::Index(0),
+                        column_type: ColumnType::String,
+                    }],
+                    relationships: vec![],
+                }],
+            },
+        };
+        let yaml = serialize_to_yaml(&project).unwrap();
+        let deserialized = deserialize_from_yaml(&yaml).unwrap();
+        assert_eq!(project, deserialized);
+    }
+
+    #[test]
+    fn round_trip_with_cmd_source() {
+        let project = Project {
+            name: "test".to_string(),
+            api_version: PROJECT_API_VERSION.to_string(),
+            spec: ProjectSpec {
+                tables: vec![TableSpec {
+                    name: "employees".to_string(),
+                    description: "Employee table".to_string(),
+                    has_header: true,
+                    source: SourceSpec::Cmd(CmdSourceSpec {
+                        command: "bash".to_string(),
+                        args: vec!["scripts/gen.sh".to_string(), "$TEMP_CSV_PATH".to_string()],
+                        stdout: false,
+                        character_encoding: "utf-8".to_string(),
+                    }),
+                    columns: vec![ColumnSpec {
+                        name: "name".to_string(),
+                        description: "Name".to_string(),
+                        column_identifier: ColumnIdentifier::Name("Name".to_string()),
                         column_type: ColumnType::String,
                     }],
                     relationships: vec![],

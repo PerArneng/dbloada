@@ -25,5 +25,6 @@ pub enum FileSystemError {
 pub trait FileSystem: Send + Sync {
     async fn save(&self, content: &str, path: &std::path::Path) -> Result<(), FileSystemError>;
     async fn load(&self, path: &std::path::Path) -> Result<String, FileSystemError>;
+    async fn load_bytes(&self, path: &std::path::Path) -> Result<Vec<u8>, FileSystemError>;
     async fn ensure_dir(&self, path: &std::path::Path) -> Result<(), FileSystemError>;
 }

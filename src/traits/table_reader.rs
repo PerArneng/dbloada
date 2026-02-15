@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use thiserror::Error;
 use crate::models::{Table, TableSpec};
 use super::file_system::FileSystemError;
+use super::csv_parser::CsvParserError;
 
 #[derive(Debug, Error)]
 pub enum TableReaderError {
@@ -12,6 +13,8 @@ pub enum TableReaderError {
     ReadError { table_name: String, message: String },
     #[error(transparent)]
     FileSystemError(#[from] FileSystemError),
+    #[error(transparent)]
+    CsvParserError(#[from] CsvParserError),
 }
 
 #[async_trait]

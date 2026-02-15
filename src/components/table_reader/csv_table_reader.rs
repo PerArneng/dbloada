@@ -1,65 +1,34 @@
-use std::collections::HashMap;
 use std::path::Path;
 use async_trait::async_trait;
-use crate::models::{ColumnIdentifier, Table, TableSpec};
-use crate::traits::{Logger, FileSystem};
+use crate::models::{SourceSpec, TableSpec};
+use crate::traits::{Logger, FileSystem, CsvParser};
 use crate::traits::table_reader::{TableReader, TableReaderError};
+use crate::models::Table;
 
 pub struct CsvTableReader {
     logger: Box<dyn Logger>,
     file_system: Box<dyn FileSystem>,
+    csv_parser: Box<dyn CsvParser>,
 }
 
 impl CsvTableReader {
-    pub fn new(logger: Box<dyn Logger>, file_system: Box<dyn FileSystem>) -> Self {
-        CsvTableReader { logger, file_system }
+    pub fn new(
+        logger: Box<dyn Logger>,
+        file_system: Box<dyn FileSystem>,
+        csv_parser: Box<dyn CsvParser>,
+    ) -> Self {
+        CsvTableReader { logger, file_system, csv_parser }
     }
 }
 
-fn strip_csv_field(field: &str) -> String {
-    let trimmed = field.trim();
-    trimmed
-        .strip_prefix('"')
-        .and_then(|s| s.strip_suffix('"'))
-        .unwrap_or(trimmed)
-        .to_string()
-}
-
-fn resolve_column_indices(
-    table: &TableSpec,
-    header_map: &Option<HashMap<String, usize>>,
-) -> Result<Vec<usize>, TableReaderError> {
-    let mut indices = Vec::with_capacity(table.columns.len());
-    for col in &table.columns {
-        let idx = match &col.column_identifier {
-            ColumnIdentifier::Index(i) => *i as usize,
-            ColumnIdentifier::Name(name) => {
-                let map = header_map.as_ref().ok_or_else(|| TableReaderError::ReadError {
-                    table_name: table.name.clone(),
-                    message: format!(
-                        "column '{}' uses name identifier '{}' but has_header is false",
-                        col.name, name
-                    ),
-                })?;
-                *map.get(name).ok_or_else(|| TableReaderError::ReadError {
-                    table_name: table.name.clone(),
-                    message: format!(
-                        "column '{}' references header '{}' which was not found in CSV headers",
-                        col.name, name
-                    ),
-                })?
-            }
-        };
-        indices.push(idx);
+fn decode_bytes(bytes: &[u8], encoding_label: &str) -> Result<String, String> {
+    let encoding = encoding_rs::Encoding::for_label(encoding_label.as_bytes())
+        .ok_or_else(|| format!("unsupported encoding: '{}'", encoding_label))?;
+    let (cow, _, had_errors) = encoding.decode(bytes);
+    if had_errors {
+        return Err(format!("encoding errors while decoding as '{}'", encoding_label));
     }
-    Ok(indices)
-}
-
-fn extract_row(record: &csv::StringRecord, indices: &[usize]) -> Vec<String> {
-    indices
-        .iter()
-        .map(|&i| strip_csv_field(record.get(i).unwrap_or("")))
-        .collect()
+    Ok(cow.into_owned())
 }
 
 #[async_trait]
@@ -69,71 +38,60 @@ impl TableReader for CsvTableReader {
     }
 
     fn can_read(&self, table: &TableSpec) -> bool {
-        table.source.filename.to_lowercase().ends_with(".csv")
+        match &table.source {
+            SourceSpec::File(fs) => fs.filename.to_lowercase().ends_with(".csv"),
+            SourceSpec::Cmd(_) => false,
+        }
     }
 
     async fn read_table(&self, table: &TableSpec, project_dir: &Path) -> Result<Table, TableReaderError> {
-        let path = project_dir.join(&table.source.filename);
+        let file_source = match &table.source {
+            SourceSpec::File(fs) => fs,
+            SourceSpec::Cmd(_) => {
+                return Err(TableReaderError::ReadError {
+                    table_name: table.name.clone(),
+                    message: "CsvTableReader does not support command sources".to_string(),
+                });
+            }
+        };
+
+        let path = project_dir.join(&file_source.filename);
         self.logger.debug(&format!("reading CSV file: {}", path.display())).await;
         self.logger.debug(&format!("has_header: {}", table.has_header)).await;
 
-        let content = self.file_system.load(&path).await?;
-
-        let mut reader = csv::ReaderBuilder::new()
-            .has_headers(table.has_header)
-            .trim(csv::Trim::All)
-            .from_reader(content.as_bytes());
-
-        let header_map = if table.has_header {
-            let headers = reader.headers().map_err(|e| TableReaderError::ReadError {
-                table_name: table.name.clone(),
-                message: format!("failed to parse CSV headers: {}", e),
-            })?;
-            let map: HashMap<String, usize> = headers
-                .iter()
-                .enumerate()
-                .map(|(i, h)| (strip_csv_field(h), i))
-                .collect();
-            self.logger.debug(&format!("CSV headers: {:?}", map)).await;
-            Some(map)
+        let encoding_lower = file_source.character_encoding.to_lowercase();
+        let content = if encoding_lower == "utf-8" || encoding_lower == "utf8" {
+            self.file_system.load(&path).await?
         } else {
-            None
+            let bytes = self.file_system.load_bytes(&path).await?;
+            decode_bytes(&bytes, &file_source.character_encoding).map_err(|msg| {
+                TableReaderError::ReadError {
+                    table_name: table.name.clone(),
+                    message: msg,
+                }
+            })?
         };
 
-        let indices = resolve_column_indices(table, &header_map)?;
-        self.logger.debug(&format!(
-            "column mapping: {:?}",
-            table.columns.iter().map(|c| &c.name).zip(indices.iter()).collect::<Vec<_>>()
-        )).await;
-
-        let mut rows = Vec::new();
-        for result in reader.records() {
-            let record = result.map_err(|e| TableReaderError::ReadError {
-                table_name: table.name.clone(),
-                message: format!("failed to parse CSV record: {}", e),
-            })?;
-            rows.push(extract_row(&record, &indices));
-        }
-
-        let column_names: Vec<String> = table.columns.iter().map(|c| c.name.clone()).collect();
+        let result = self.csv_parser.parse(&content, table).await?;
 
         self.logger.info(&format!(
             "read table '{}' using reader '{}': {} rows, {} columns",
             table.name,
             self.name(),
-            rows.len(),
-            column_names.len(),
+            result.num_rows(),
+            result.num_columns(),
         )).await;
 
-        Ok(Table::new(table.name.clone(), column_names, rows))
+        Ok(result)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{ColumnSpec, ColumnType, SourceSpec};
+    use crate::models::{ColumnSpec, ColumnIdentifier, ColumnType, FileSourceSpec};
     use crate::components::test_helpers::{TestLogger, InMemoryFileSystem};
+    use crate::components::csv_parser::CsvParserImpl;
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
@@ -146,7 +104,15 @@ mod tests {
         CsvTableReader::new(
             Box::new(TestLogger),
             Box::new(InMemoryFileSystem::new(store)),
+            Box::new(CsvParserImpl::new(Box::new(TestLogger))),
         )
+    }
+
+    fn file_source(filename: &str) -> SourceSpec {
+        SourceSpec::File(FileSourceSpec {
+            filename: filename.to_string(),
+            character_encoding: "utf-8".to_string(),
+        })
     }
 
     fn table_spec_with_header(name: &str, filename: &str, columns: Vec<ColumnSpec>) -> TableSpec {
@@ -154,10 +120,7 @@ mod tests {
             name: name.to_string(),
             description: String::new(),
             has_header: true,
-            source: SourceSpec {
-                filename: filename.to_string(),
-                character_encoding: "utf-8".to_string(),
-            },
+            source: file_source(filename),
             columns,
             relationships: vec![],
         }
@@ -168,10 +131,7 @@ mod tests {
             name: name.to_string(),
             description: String::new(),
             has_header: false,
-            source: SourceSpec {
-                filename: filename.to_string(),
-                character_encoding: "utf-8".to_string(),
-            },
+            source: file_source(filename),
             columns,
             relationships: vec![],
         }
@@ -213,6 +173,25 @@ mod tests {
     fn cannot_read_non_csv() {
         let reader = make_reader(vec![]);
         let spec = table_spec_with_header("t", "data/file.json", vec![]);
+        assert!(!reader.can_read(&spec));
+    }
+
+    #[test]
+    fn cannot_read_cmd_source() {
+        let reader = make_reader(vec![]);
+        let spec = TableSpec {
+            name: "t".to_string(),
+            description: String::new(),
+            has_header: true,
+            source: SourceSpec::Cmd(crate::models::CmdSourceSpec {
+                command: "bash".to_string(),
+                args: vec![],
+                stdout: true,
+                character_encoding: "utf-8".to_string(),
+            }),
+            columns: vec![],
+            relationships: vec![],
+        };
         assert!(!reader.can_read(&spec));
     }
 
@@ -301,25 +280,14 @@ mod tests {
     }
 
     #[test]
-    fn resolve_column_indices_by_index() {
-        let spec = table_spec_no_header("t", "f.csv", vec![
-            col_by_index("a", 2),
-            col_by_index("b", 0),
-        ]);
-        let indices = resolve_column_indices(&spec, &None).unwrap();
-        assert_eq!(indices, vec![2, 0]);
+    fn decode_bytes_utf8() {
+        let result = decode_bytes(b"hello", "utf-8").unwrap();
+        assert_eq!(result, "hello");
     }
 
     #[test]
-    fn resolve_column_indices_by_name() {
-        let spec = table_spec_with_header("t", "f.csv", vec![
-            col_by_name("col_b", "B"),
-            col_by_name("col_a", "A"),
-        ]);
-        let mut map = HashMap::new();
-        map.insert("A".to_string(), 0);
-        map.insert("B".to_string(), 1);
-        let indices = resolve_column_indices(&spec, &Some(map)).unwrap();
-        assert_eq!(indices, vec![1, 0]);
+    fn decode_bytes_unknown_encoding_errors() {
+        let result = decode_bytes(b"hello", "unknown-encoding");
+        assert!(result.is_err());
     }
 }

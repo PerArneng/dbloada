@@ -28,8 +28,8 @@ impl Engine for EngineImpl {
         self.logger.info("hello").await;
     }
 
-    async fn init_project_dir(&self, path: &Path, name: Option<&str>) -> Result<(), InitError> {
-        self.init.init(path, name).await
+    async fn init_project_dir(&self, path: &Path, name: Option<&str>, force: bool) -> Result<(), InitError> {
+        self.init.init(path, name, force).await
     }
 
     async fn load_project(&self, path: &Path) -> Result<Project, LoadError> {

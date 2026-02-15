@@ -8,6 +8,7 @@ spec:
       description: Countries where cities and by extension offices are located in
       hasHeader: false
       source:
+        type: file
         filename: data/countries.csv
         characterEncoding: utf-8
       columns:
@@ -20,6 +21,7 @@ spec:
         This represents a city located within a country.
       hasHeader: true
       source:
+        type: file
         filename: data/cities.csv
         characterEncoding: utf-8
       columns:
@@ -41,6 +43,7 @@ spec:
       description: The physical building where the people in this company work
       hasHeader: true
       source:
+        type: file
         filename: data/offices.csv
         characterEncoding: utf-8
       columns:

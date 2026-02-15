@@ -3,7 +3,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use async_trait::async_trait;
-use crate::traits::{Logger, FileSystem, FileSystemError};
+use crate::models::Project;
+use crate::traits::{Logger, FileSystem, FileSystemError, ProjectIO, ProjectIOError};
 
 pub struct TestLogger;
 
@@ -45,7 +46,37 @@ impl FileSystem for InMemoryFileSystem {
             })
     }
 
+    async fn load_bytes(&self, path: &Path) -> Result<Vec<u8>, FileSystemError> {
+        let content = self.load(path).await?;
+        Ok(content.into_bytes())
+    }
+
     async fn ensure_dir(&self, _path: &Path) -> Result<(), FileSystemError> {
         Ok(())
     }
+}
+
+pub struct InMemoryProjectIO;
+
+#[async_trait]
+impl ProjectIO for InMemoryProjectIO {
+    async fn load(&self, _path: &Path) -> Result<Project, ProjectIOError> {
+        unimplemented!("not needed in test")
+    }
+
+    async fn save(&self, _project: &Project, _path: &Path) -> Result<(), ProjectIOError> {
+        Ok(())
+    }
+}
+
+pub fn mock_logger() -> Box<dyn Logger> {
+    Box::new(TestLogger)
+}
+
+pub fn mock_project_io() -> Box<dyn ProjectIO> {
+    Box::new(InMemoryProjectIO)
+}
+
+pub fn mock_file_system() -> Box<dyn FileSystem> {
+    Box::new(InMemoryFileSystem::new(Arc::new(Mutex::new(HashMap::new()))))
 }

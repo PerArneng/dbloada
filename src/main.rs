@@ -26,6 +26,10 @@ enum Commands {
         /// Project name (must be a valid Kubernetes resource name). Defaults to the directory name.
         #[arg(short, long)]
         name: Option<String>,
+
+        /// Force initialization even if the directory is not empty
+        #[arg(short, long)]
+        force: bool,
     },
     /// Load a dbloada project from the given directory
     Load {
@@ -42,8 +46,8 @@ async fn main() {
     let engine = assembler.engine();
 
     match cli.command {
-        Commands::Init { dir, name } => {
-            if let Err(e) = engine.init_project_dir(&dir, name.as_deref()).await {
+        Commands::Init { dir, name, force } => {
+            if let Err(e) = engine.init_project_dir(&dir, name.as_deref(), force).await {
                 eprintln!("Error: {e}");
                 process::exit(1);
             }

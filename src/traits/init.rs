@@ -16,9 +16,11 @@ pub enum InitError {
     IOError(#[from] ProjectIOError),
     #[error("file operation failed: {0}")]
     FileError(#[from] FileSystemError),
+    #[error("directory is not empty: {0} (use --force to override)")]
+    DirectoryNotEmpty(String),
 }
 
 #[async_trait]
 pub trait Init: Send + Sync {
-    async fn init(&self, path: &Path, name: Option<&str>) -> Result<(), InitError>;
+    async fn init(&self, path: &Path, name: Option<&str>, force: bool) -> Result<(), InitError>;
 }

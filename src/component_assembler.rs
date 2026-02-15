@@ -5,9 +5,11 @@ use crate::components::load::LoadImpl;
 use crate::components::file_system::DiskFileSystem;
 use crate::components::project_serialization::YamlProjectSerialization;
 use crate::components::project_io::YamlProjectIO;
+use crate::components::csv_parser::CsvParserImpl;
 use crate::components::table_reader::CsvTableReader;
+use crate::components::table_reader::CmdCsvTableReader;
 use crate::traits::{
-    Engine, ProjectIO, ProjectSerialization, Init, Load, Logger, FileSystem, TableReader,
+    Engine, ProjectIO, ProjectSerialization, Init, Load, Logger, FileSystem, CsvParser, TableReader,
 };
 
 pub struct ComponentAssembler;
@@ -29,8 +31,15 @@ impl ComponentAssembler {
         Box::new(LoadImpl::new(self.logger(), self.project_io()))
     }
 
+    pub fn csv_parser(&self) -> Box<dyn CsvParser> {
+        Box::new(CsvParserImpl::new(self.logger()))
+    }
+
     pub fn table_readers(&self) -> Vec<Box<dyn TableReader>> {
-        vec![Box::new(CsvTableReader::new(self.logger(), self.file_system()))]
+        vec![
+            Box::new(CsvTableReader::new(self.logger(), self.file_system(), self.csv_parser())),
+            Box::new(CmdCsvTableReader::new(self.logger(), self.csv_parser())),
+        ]
     }
 
     pub fn engine(&self) -> Box<dyn Engine> {

@@ -5,6 +5,7 @@ pub mod file_system;
 pub mod project_serialization;
 pub mod project_io;
 pub mod load;
+pub mod csv_parser;
 pub mod table_reader;
 
 pub use logger::Logger;
@@ -14,4 +15,5 @@ pub use file_system::{FileSystem, FileSystemError};
 pub use project_serialization::{ProjectSerialization, ProjectSerializationError};
 pub use project_io::{ProjectIO, ProjectIOError};
 pub use load::{Load, LoadError};
+pub use csv_parser::{CsvParser, CsvParserError};
 pub use table_reader::{TableReader, TableReaderError};

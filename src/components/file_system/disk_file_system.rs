@@ -40,6 +40,16 @@ impl FileSystem for DiskFileSystem {
         Ok(content)
     }
 
+    async fn load_bytes(&self, path: &Path) -> Result<Vec<u8>, FileSystemError> {
+        self.logger.debug(&format!("reading file bytes: {}", path.display())).await;
+        let bytes = tokio::fs::read(path).await.map_err(|e| FileSystemError::ReadError {
+            path: path.to_path_buf(),
+            source: e,
+        })?;
+        self.logger.info(&format!("read file bytes: {}", path.display())).await;
+        Ok(bytes)
+    }
+
     async fn ensure_dir(&self, path: &Path) -> Result<(), FileSystemError> {
         self.logger.debug(&format!("ensuring directory: {}", path.display())).await;
         tokio::fs::create_dir_all(path).await.map_err(|e| FileSystemError::DirCreateError {
