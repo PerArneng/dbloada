@@ -49,8 +49,20 @@ async fn main() {
             }
         }
         Commands::Load { dir } => {
-            match engine.load_project(&dir).await {
-                Ok(project) => println!("{:#?}", project),
+            let project = match engine.load_project(&dir).await {
+                Ok(project) => project,
+                Err(e) => {
+                    eprintln!("Error: {e}");
+                    process::exit(1);
+                }
+            };
+            println!("{:#?}", project);
+            match engine.read_tables(&project, &dir).await {
+                Ok(tables) => {
+                    for table in &tables {
+                        print!("{}", models::table_to_string(table));
+                    }
+                }
                 Err(e) => {
                     eprintln!("Error: {e}");
                     process::exit(1);
