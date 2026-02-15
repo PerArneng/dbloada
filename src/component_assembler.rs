@@ -28,7 +28,7 @@ impl ComponentAssembler {
     }
 
     pub fn load(&self) -> Box<dyn Load> {
-        Box::new(LoadImpl::new(self.logger(), self.project_io()))
+        Box::new(LoadImpl::new(self.logger(), self.project_io(), self.table_readers()))
     }
 
     pub fn csv_parser(&self) -> Box<dyn CsvParser> {
@@ -43,7 +43,7 @@ impl ComponentAssembler {
     }
 
     pub fn engine(&self) -> Box<dyn Engine> {
-        Box::new(EngineImpl::new(self.logger(), self.init(), self.load(), self.table_readers()))
+        Box::new(EngineImpl::new(self.logger(), self.init(), self.load()))
     }
 
     pub fn file_system(&self) -> Box<dyn FileSystem> {

@@ -13,6 +13,12 @@ pub struct ProjectSpec {
     pub tables: Vec<TableSpec>,
 }
 
+#[derive(Debug)]
+pub struct LoadedProject {
+    pub project: Project,
+    pub tables: Vec<super::table::Table>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct TableSpec {
     pub name: String,

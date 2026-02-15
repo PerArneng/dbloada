@@ -1,8 +1,9 @@
 use std::path::Path;
 use async_trait::async_trait;
 use thiserror::Error;
-use crate::models::Project;
+use crate::models::LoadedProject;
 use super::project_io::ProjectIOError;
+use super::TableReaderError;
 
 #[derive(Debug, Error)]
 pub enum LoadError {
@@ -12,9 +13,11 @@ pub enum LoadError {
     ProjectFileNotFound(String),
     #[error(transparent)]
     IOError(#[from] ProjectIOError),
+    #[error(transparent)]
+    TableReaderError(#[from] TableReaderError),
 }
 
 #[async_trait]
 pub trait Load: Send + Sync {
-    async fn load(&self, path: &Path) -> Result<Project, LoadError>;
+    async fn load(&self, path: &Path) -> Result<LoadedProject, LoadError>;
 }
